@@ -1,0 +1,21 @@
+{
+  "query": "Carrer de Girona 81, Barcelona",
+  "lat": 41.39524186,
+  "lon": 2.17038759,
+  "geocoder": "ICGC",
+  "refcat": "0631605DF3803B",
+  "catastro_address": "CL GIRONA 81 BARCELONA (BARCELONA)",
+  "building_id": "0631605DF3803B",
+  "year_built": 1900,
+  "current_use": "1_residential",
+  "dwellings": 5,
+  "floors_above_ground": 6,
+  "footprint_area_m2": 166.2,
+  "footprint_wkt": "POLYGON ((430626.76 4582949.28, 430627.99 4582950.49, 430628.58 4582951.08, 430630.43 4582952.91, 430633.67 4582956.11, 430639.84 4582962.2, 430645.56 4582967.86, 430649.66 4582963.65, 430647.22 4582961.24, 430646.35 4582960.39, 430643.43 4582957.5, 430640.6 4582954.72, 430638.17 4582952.33, 430637.42 4582951.59, 430636.65 4582950.88, 430634.46 4582948.7, 430632.61 4582946.86, 430630.5 4582944.75, 430629.32 4582943.58, 430625.49 4582948.03, 430626.76 4582949.28))",
+  "lidar_tiles": [],
+  "roof": null,
+  "flat_roof": null,
+  "heritage_protected": null,
+  "heritage_details": null,
+  "warnings": []
+}
