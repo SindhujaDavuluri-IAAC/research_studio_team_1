@@ -1,0 +1,140 @@
+{
+  "type": "FeatureCollection",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:EPSG::25831"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              430537.82,
+              4582731.82
+            ],
+            [
+              430539.55,
+              4582733.88
+            ],
+            [
+              430540.02,
+              4582734.44
+            ],
+            [
+              430543.22,
+              4582738.25
+            ],
+            [
+              430543.38,
+              4582738.44
+            ],
+            [
+              430545.85,
+              4582741.39
+            ],
+            [
+              430546.76,
+              4582742.47
+            ],
+            [
+              430549.51,
+              4582745.75
+            ],
+            [
+              430551.5,
+              4582748.12
+            ],
+            [
+              430557.51,
+              4582755.28
+            ],
+            [
+              430559.07,
+              4582757.13
+            ],
+            [
+              430569.69,
+              4582746.16
+            ],
+            [
+              430561.42,
+              4582738.02
+            ],
+            [
+              430555.15,
+              4582731.84
+            ],
+            [
+              430552.23,
+              4582728.97
+            ],
+            [
+              430542.51,
+              4582719.39
+            ],
+            [
+              430534.39,
+              4582727.73
+            ],
+            [
+              430536.3,
+              4582730.01
+            ],
+            [
+              430537.82,
+              4582731.82
+            ]
+          ],
+          [
+            [
+              430560.83,
+              4582738.72
+            ],
+            [
+              430561.48,
+              4582739.29
+            ],
+            [
+              430552.77,
+              4582748.1
+            ],
+            [
+              430552.15,
+              4582747.42
+            ],
+            [
+              430560.83,
+              4582738.72
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "query": "Carrer de Roger de Ll\u00faria 56, Barcelona",
+        "lat": 41.39305916,
+        "lon": 2.16913541,
+        "geocoder": "ICGC",
+        "refcat": "0629625DF3802H",
+        "catastro_address": "CL ROGER DE LLURIA 56 BARCELONA (BARCELONA)",
+        "building_id": "0629625DF3802H",
+        "year_built": 1900,
+        "current_use": "1_residential",
+        "dwellings": 10,
+        "building_height_m": 18.0,
+        "height_source": "estimate (3 m per Catastro floor)",
+        "footprint_area_m2": 502.6,
+        "lidar_tiles": [],
+        "roof": null,
+        "flat_roof": null,
+        "heritage_protected": null,
+        "heritage_details": null,
+        "warnings": []
+      }
+    }
+  ]
+}

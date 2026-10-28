@@ -1,0 +1,6 @@
+requests
+shapely>=2.0
+pyproj
+laspy[lazrs]
+numpy
+pytest
