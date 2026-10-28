@@ -1,0 +1,103 @@
+/* Layout: full-screen 3D map; tools top-left, time bar bottom-left, Roof Report on the right (bottom sheet on phones). */
+:root {
+  --ink: #16202a;
+  --muted: #5b6875;
+  --paper: #fbfaf7;
+  --line: #e2ded5;
+  --sun: #f2a516;
+  --sel: #e8930c;
+  --got-full: #2f7d3a;
+  --got-part: #a9d39b;
+  --bld: #d9d4cb;
+  --bld-est: #a59d90;
+  --sky: #1f5f8b;
+  --bad: #b3261e;
+  --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { font: 14px/1.45 var(--font); color: var(--ink); background: #0d1318; overflow: hidden; }
+
+#map { position: fixed; inset: 0; }
+.cesium-viewer-bottom { left: auto !important; right: 400px; bottom: 4px; }
+
+button, select { font: 500 13px var(--font); color: var(--ink); }
+button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+
+.toolbar {
+  position: fixed; top: 16px; left: 16px; z-index: 5;
+  display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100vw - 420px);
+}
+.toolbar button, .secondary {
+  background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer;
+}
+.toolbar button:hover, .secondary:hover { border-color: var(--sky); }
+.toolbar .primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.toolbar .primary:disabled { opacity: .6; cursor: wait; }
+
+.timebar {
+  position: fixed; left: 16px; bottom: 16px; z-index: 5;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--paper); border-radius: 8px; padding: 8px 12px; box-shadow: 0 6px 24px rgba(0,0,0,.3);
+  max-width: calc(100vw - 420px);
+}
+.timebar label { font-size: 12px; color: var(--muted); }
+.timebar select { border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; background: #fff; }
+.timebar input { width: 200px; accent-color: var(--sun); }
+.timebar output { font: 500 13px var(--mono); min-width: 44px; }
+
+#panel {
+  position: fixed; top: 16px; right: 16px; z-index: 5;
+  width: 370px; max-height: calc(100vh - 32px); overflow-y: auto;
+  background: var(--paper); border-radius: 10px; padding: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.eyebrow { margin: 0; font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 2px 0 6px; font-size: 22px; font-weight: 600; }
+.status { margin: 0; color: var(--muted); }
+.status[data-kind="error"] { color: var(--bad); }
+.status[data-kind="loading"]::before { content: "◌ "; color: var(--sel); }
+
+#report { display: flex; flex-direction: column; gap: 14px; }
+#report[hidden] { display: none; }
+
+.building-line { margin: 0; font-size: 12px; color: var(--muted); }
+.hero-number { display: flex; align-items: baseline; gap: 8px; }
+.big { font: 600 40px/1 var(--font); color: var(--sel); font-variant-numeric: tabular-nums; }
+.unit { color: var(--muted); }
+.own-line { margin: -6px 0 0; }
+
+.slider-label { font-size: 13px; }
+input[type="range"] { accent-color: var(--sel); }
+#sun-range { width: 100%; }
+
+.stats { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+.stats div { border-top: 1px solid var(--line); padding-top: 6px; }
+.stats dt { font-size: 11px; color: var(--muted); }
+.stats dd { margin: 2px 0 0; font: 500 15px var(--mono); font-variant-numeric: tabular-nums; }
+
+.share { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+.share label { font-size: 11px; color: var(--muted); }
+.share select { border: 1px solid var(--line); border-radius: 5px; padding: 5px 6px; background: #fff; }
+.share-line { margin: 0; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 11px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 12px; height: 12px; border-radius: 2px; background: var(--c); border: 1px solid rgba(0,0,0,.15); }
+
+.assumptions { font-size: 12px; color: var(--muted); }
+.assumptions summary { cursor: pointer; color: var(--ink); }
+.assumptions ul { margin: 6px 0 0; padding-left: 18px; }
+
+@media (max-width: 760px) {
+  #panel { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 50vh; border-radius: 12px 12px 0 0; padding: 16px; }
+  .toolbar, .timebar { max-width: calc(100vw - 32px); }
+  .timebar { bottom: auto; top: 64px; }
+  .timebar input { width: 120px; }
+  .cesium-viewer-bottom { right: 8px; bottom: 51vh; }
+  .big { font-size: 32px; }
+}
