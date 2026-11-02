@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Roofscapes RePowered</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-tab="area">
+  <header id="topbar" class="topbar">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="19" cy="8" r="4" fill="#f2a516"></circle><path d="M3 24 L3 14 L14 8 L25 14 L25 24 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M8 18 H20" stroke="currentColor" stroke-width="2"></path></svg>
+      <div>
+        <p class="brand-name">Roofscapes RePowered</p>
+        <p class="brand-sub">Barcelona · 9 blocks of the Eixample</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Screens">
+      <button type="button" role="tab" data-tab="area" aria-selected="true">Area</button>
+      <button type="button" role="tab" data-tab="building" aria-selected="false">Building</button>
+      <button type="button" role="tab" data-tab="sharing" aria-selected="false">Sharing</button>
+      <button type="button" role="tab" data-tab="method" aria-selected="false">How it works</button>
+    </nav>
+    <form id="search" class="search" role="search">
+      <label for="search-input">Address</label>
+      <input id="search-input" type="text" placeholder="Carrer de Roger de Llúria 56" autocomplete="street-address">
+      <button type="submit">Find roof</button>
+    </form>
+  </header>
+
+  <div id="map" aria-label="3D map of Barcelona (Ajuntament de Barcelona model)"></div>
+  <div id="veil" hidden></div>
+
+  <aside id="legend" class="legend card" aria-label="Map colours"></aside>
+
+  <aside id="panel" class="card">
+    <p id="status" class="status" data-kind="loading">Starting the 3D map…</p>
+
+    <!-- 1. AREA -->
+    <section id="tab-area" class="tab" aria-labelledby="area-title">
+      <p class="eyebrow">Area · 9 blocks</p>
+      <h1 id="area-title">How much of their own electricity can these 9 blocks make?</h1>
+      <div class="hero">
+        <span id="a-cover" class="big">–</span>
+        <span class="unit">of their yearly use</span>
+      </div>
+      <p id="a-cover-note" class="note">from solar panels on their own roofs, after sharing between buildings</p>
+      <dl class="tiles">
+        <div><dt>Roofs run by our pipeline</dt><dd id="a-roofs">–</dd></div>
+        <div><dt>Panels</dt><dd id="a-panels">–</dd></div>
+        <div><dt>Energy per year</dt><dd id="a-energy">–</dd></div>
+        <div><dt id="a-homes-label">Homes it could power</dt><dd id="a-homes">–</dd></div>
+      </dl>
+      <div class="block-chart">
+        <p class="subhead">Block by block (kWh per year)</p>
+        <div id="a-blocks" class="bars" aria-label="Energy per block"></div>
+        <p id="a-blocks-note" class="note"></p>
+      </div>
+      <div>
+        <p class="subhead">Best roofs</p>
+        <div id="a-best" class="best-list"></div>
+      </div>
+    </section>
+
+    <!-- 2. BUILDING -->
+    <section id="tab-building" class="tab" aria-labelledby="building-title" hidden>
+      <div id="building-empty">
+        <p class="eyebrow">Building</p>
+        <h1 id="building-title">Choose a roof</h1>
+        <p class="note">Click a roof on the map, type an address above, or pick one of the best roofs in Area.</p>
+      </div>
+      <div id="report" hidden>
+        <p id="r-source" class="source-tag"></p>
+        <div class="building">
+          <h1 id="r-title" class="building-title"></h1>
+          <p id="r-use" class="building-use"></p>
+          <p id="r-building" class="building-line"></p>
+          <p id="r-catastro" class="building-line"></p>
+        </div>
+        <div class="hero">
+          <span id="r-energy" class="big">–</span>
+          <span class="unit">kWh / year</span>
+        </div>
+        <p id="r-own" class="own-line"></p>
+        <p id="r-step5" class="step5-line" hidden></p>
+        <div id="r-months" class="months" aria-label="Energy month by month" hidden></div>
+        <div id="r-day-box" class="day" hidden>
+          <p class="subhead">A typical day in <span id="r-day-month"></span></p>
+          <svg id="r-day" viewBox="0 0 336 120" role="img" aria-label="Solar output per hour on a typical day"></svg>
+          <p class="note">kWh per hour, local time. The line moves with the month and hour in the time bar.</p>
+        </div>
+        <p id="r-reading" class="reading-line"></p>
+
+        <label class="slider-label" for="sun-range">
+          Keep panels with at least <strong id="sun-out">60%</strong> of full sun
+        </label>
+        <input id="sun-range" type="range" min="40" max="100" step="5" value="60">
+
+        <dl class="stats">
+          <div><dt>Roof area</dt><dd id="r-roof">–</dd></div>
+          <div><dt id="r-slots-label">Panel slots (geometry)</dt><dd id="r-slots">–</dd></div>
+          <div><dt id="r-panels-label">Panels after obstacles</dt><dd id="r-panels">–</dd></div>
+          <div><dt>Panel area</dt><dd id="r-parea">–</dd></div>
+          <div><dt>Installed power</dt><dd id="r-kwp">–</dd></div>
+          <div><dt>Sun lost to shade</dt><dd id="r-shade">–</dd></div>
+        </dl>
+
+        <div class="share">
+          <label for="policy-select">Who gets the energy (quick yearly estimate)</label>
+          <select id="policy-select">
+            <option value="own-first">Own building first, then nearest neighbours</option>
+            <option value="equal">Share equally with every building within 2 km</option>
+          </select>
+          <p id="r-share" class="share-line"></p>
+        </div>
+
+        <details class="assumptions">
+          <summary>Assumptions in this calculation</summary>
+          <ul id="r-assumptions"></ul>
+        </details>
+
+        <button type="button" id="save-btn" class="secondary">Save roof data (JSON)</button>
+      </div>
+    </section>
+
+    <!-- 3. SHARING -->
+    <section id="tab-sharing" class="tab" aria-labelledby="sharing-title" hidden>
+      <p class="eyebrow">Sharing · step 5</p>
+      <h1 id="sharing-title">Sharing groups</h1>
+      <p class="text">Hour by hour, every building first uses its own sun. Extra sun goes to the other buildings in its group, split by what each one still needs. What nobody needs goes to the grid.</p>
+      <div>
+        <p id="rule-label" class="subhead">Distance rule</p>
+        <div id="s-rules" class="segmented" role="group" aria-labelledby="rule-label"></div>
+        <p id="s-rule-note" class="note"></p>
+      </div>
+      <div>
+        <p class="subhead">The 9 blocks' use covered by their own sun</p>
+        <div class="compare">
+          <span>Each roof alone</span><span class="track"><span id="s-alone-bar" class="fill"></span></span><span id="s-alone">–</span>
+          <span>With sharing</span><span class="track"><span id="s-with-bar" class="fill"></span></span><span id="s-with">–</span>
+        </div>
+      </div>
+      <div>
+        <p class="subhead">Groups</p>
+        <div id="s-groups" class="groups"></div>
+      </div>
+    </section>
+  </aside>
+
+  <!-- 4. HOW IT WORKS -->
+  <section id="story" aria-labelledby="story-title" hidden>
+    <div class="problem">
+      <p class="eyebrow light">The problem</p>
+      <h1 id="story-title">Barcelona generates 6,199 GWh a year, about 93% of what it uses. Only 1.2% of it is renewable.</h1>
+      <p>Our tool finds which roofs can carry solar panels, how much they make after shade, and which buildings nearby can share it. Source: Barcelona Energy Observatory.</p>
+    </div>
+    <ol class="steps">
+      <li class="step">
+        <p class="step-n">Step 1</p>
+        <h2>Find the building</h2>
+        <div class="step-pic">
+          <svg width="140" height="120" viewBox="0 0 140 120" aria-hidden="true"><path d="M30 20 H110 L120 30 V90 L110 100 H30 L20 90 V30 Z" fill="#e7b9ab" stroke="#9e5243" stroke-width="2"></path><path d="M48 40 H92 L100 48 V72 L92 80 H48 L40 72 V48 Z" fill="#efe9de" stroke="#9e5243" stroke-width="2"></path><path d="M70 20 V40 M70 80 V100 M20 60 H40 M100 60 H120" stroke="#9e5243" stroke-width="1.2" stroke-dasharray="3 3"></path><circle cx="110" cy="30" r="6" fill="#1f5f8b"></circle></svg>
+        </div>
+        <p>An address or a click on the map becomes a cadastral plot: its outline, age, floors and homes, and whether the roof is flat.</p>
+        <p class="step-src">Catastro · ICGC LiDAR</p>
+      </li>
+      <li class="step">
+        <p class="step-n">Step 2</p>
+        <h2>Read the roof</h2>
+        <div class="step-trio">
+          <img src="img/lluria56_photo.png" alt="Aerial photo of the roof of Roger de Llúria 56">
+          <img src="img/lluria56_height.png" alt="LiDAR height map of the same roof: green is the main roof level, red the stair housings">
+          <img src="img/lluria56_preview.png" alt="The roof read by step 2: green free roof, red obstacles, yellow where panels fit">
+        </div>
+        <p>Photo, LiDAR height, reading. LiDAR finds roof levels, stairs and tanks; the AI model on the photo adds skylights and existing panels.</p>
+        <p class="ai-tag">AI: U-Net with a ResNet-34 encoder (pretrained on ImageNet), fine-tuned on our labelled roofs · training next</p>
+        <p class="step-src">ICGC LiDAR · ICGC orthophoto · Roger de Llúria 56</p>
+      </li>
+      <li class="step">
+        <p class="step-n">Step 3</p>
+        <h2>Place the panels</h2>
+        <div class="step-pic"><img src="img/bruc59_panels.png" alt="Panel layout on the roof of Carrer del Bruc 59: rows of panels coloured from dark blue (most shade) to orange (least shade)"></div>
+        <p>Rows of 1.76 × 1.13 m panels, tilted 10° towards the side closest to south, spaced so they don't shade each other in winter.</p>
+        <p class="step-src">Our layout · Carrer del Bruc 59</p>
+      </li>
+      <li class="step">
+        <p class="step-n">Step 4</p>
+        <h2>Shade and energy</h2>
+        <div class="step-pic step-bars" aria-hidden="true">
+          <div class="mini-bars"><span style="--h:31%"></span><span style="--h:46%"></span><span style="--h:62%"></span><span style="--h:74%"></span><span style="--h:97%"></span><span style="--h:96%"></span><span style="--h:100%"></span><span style="--h:88%"></span><span style="--h:63%"></span><span style="--h:33%"></span><span style="--h:32%"></span><span style="--h:28%"></span></div>
+          <span>Bruc 59 · 19,463 kWh a year</span>
+        </div>
+        <p>Every hour of a typical year, with shade from neighbours, trees and rooftop structures. Panels that lose more than 40% of their sun are left out.</p>
+        <p class="step-src">PVGIS · ICGC LiDAR (150 m around)</p>
+      </li>
+      <li class="step">
+        <p class="step-n">Step 5</p>
+        <h2>Use and sharing</h2>
+        <div class="step-pic">
+          <svg width="160" height="120" viewBox="0 0 160 120" aria-hidden="true"><g fill="none" stroke="#b06f00" stroke-width="2.5" stroke-linecap="round"><path d="M80 60 Q60 30 36 28"></path><path d="M80 60 Q110 35 128 30"></path><path d="M80 60 Q50 85 34 96"></path><path d="M80 60 Q115 85 130 94"></path></g><g fill="#f5d38f" stroke="#b06f00" stroke-width="2"><rect x="24" y="18" width="24" height="20" rx="3"></rect><rect x="116" y="20" width="24" height="20" rx="3"></rect><rect x="22" y="86" width="24" height="20" rx="3"></rect><rect x="118" y="84" width="24" height="20" rx="3"></rect></g><rect x="64" y="46" width="32" height="28" rx="4" fill="#d08a0b"></rect><circle cx="80" cy="60" r="6" fill="#ffe066"></circle></svg>
+        </div>
+        <p>Each building's use, hour by hour, from its homes and shops. Then groups of buildings within 500 m share the extra sun.</p>
+        <p class="step-src">Catastro · Open Data BCN (Datadis meters)</p>
+      </li>
+    </ol>
+  </section>
+
+  <div id="timebar" class="timebar card">
+    <span class="eyebrow">Time</span>
+    <div id="t-months" class="months-pick" role="group" aria-label="Month"></div>
+    <label for="t-hour">Hour</label>
+    <input id="t-hour" type="range" min="5" max="21" step="1" value="13">
+    <span id="t-hour-out" class="hour-out">13:00</span>
+    <label class="check"><input id="t-shadows" type="checkbox"> Shadows</label>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="solar.js"></script>
+  <script src="https://js.arcgis.com/4.31/"></script>
+  <script src="app.js"></script>
+</body>
+</html>

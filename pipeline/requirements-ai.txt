@@ -1,0 +1,4 @@
+# Only needed to train or use the step 2 AI model (large: about 200 MB to 2 GB).
+# Install after requirements.txt. On a laptop without an NVIDIA GPU, train on Google Colab.
+torch
+segmentation-models-pytorch

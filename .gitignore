@@ -1,0 +1,26 @@
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Big downloads and training files (each person keeps their own copy)
+pipeline/data/*
+pipeline/models/
+# ...except the hand-checked list of roofs already in use, which everyone should share
+!pipeline/data/roof_exclusions.csv
+*.laz
+*.las
+
+# Outputs written while running the pipeline from pipeline/
+# (keep the ones worth sharing in pipeline/examples/)
+pipeline/*.json
+pipeline/*.geojson
+pipeline/*.png
+pipeline/*.csv
+!pipeline/roofs.csv
+
+# Editors and systems
+.vscode/
+.DS_Store
+Thumbs.db

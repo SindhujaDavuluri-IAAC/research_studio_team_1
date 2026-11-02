@@ -1,0 +1,9 @@
+# Steps 1-4 and the website export
+requests
+shapely>=2.0
+pyproj
+laspy[lazrs]
+numpy
+scipy
+pillow
+pytest
