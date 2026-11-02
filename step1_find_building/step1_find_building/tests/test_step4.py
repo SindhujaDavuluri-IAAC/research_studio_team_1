@@ -157,3 +157,38 @@ def test_batch_ranks_and_survives_errors(offline, monkeypatch):
     assert rows[0]["address"] == "good" and rows[0]["rank"] == 1
     assert rows[1]["error"] and rows[1]["rank"] == ""
     assert (offline / "out" / "ranking.csv").exists()
+
+
+def test_batch_uses_lat_lon_from_the_roof_test_set(offline, monkeypatch):
+    seen = []
+    real = shade_yield.shade_yield
+    def fake(laz_dir, address, lat=None, lon=None, **kw):
+        seen.append((address, lat, lon))
+        return real(laz_dir, address, lat=lat, lon=lon, **kw)
+    monkeypatch.setattr(batch, "shade_yield", fake)
+    (offline / "roofs.csv").write_text(
+        "address,block,block_name,refcat,lat,lon,plot_m2\n"
+        "CL PAU CLARIS 1,5,Pau Claris-Roger de Llúria / Diputació-Consell de Cent,0629625DF3802H,41.39,2.17,500\n",
+        encoding="utf-8")
+    rows = batch.run_batch(offline / "roofs.csv", str(offline), offline / "out", offline / "tmy.json")
+    assert seen == [(None, 41.39, 2.17)]
+    assert rows[0]["block_name"].startswith("Pau Claris") and rows[0]["rank"] == 1
+    assert (offline / "out" / "0629625df3802h_yield.json").exists()
+
+
+def test_batch_can_run_one_block(offline, monkeypatch):
+    monkeypatch.setattr(batch, "shade_yield", lambda laz_dir, address, **kw: (_ for _ in ()).throw(SystemExit("x")))
+    (offline / "roofs.csv").write_text("address,block\na,1\nb,5\nc,5\n", encoding="utf-8")
+    rows = batch.run_batch(offline / "roofs.csv", str(offline), offline / "out", offline / "tmy.json", blocks=[5])
+    assert sorted(r["address"] for r in rows) == ["b", "c"]
+
+
+def test_batch_reads_each_lidar_tile_once(tmp_path, monkeypatch):
+    import laspy
+    calls = []
+    monkeypatch.setattr(laspy, "read", lambda path: calls.append(path) or object())
+    batch.keep_lidar_in_memory()
+    tile = tmp_path / "t.laz"
+    first = laspy.read(tile)
+    assert laspy.read(str(tile)) is first and len(calls) == 1
+
