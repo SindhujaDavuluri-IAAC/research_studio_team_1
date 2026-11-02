@@ -33,13 +33,31 @@ Outputs:
 - `lluria56_panels.geojson`: panel outlines (EPSG:25831), opens in QGIS
 - `lluria56_panels.png`: the layout, dark blue = most shade, orange = best panels
 
+## The roof test set: every building in the 9 focus blocks
+
+```
+python -m step4.roof_test_set --out data\roof_test_set
+```
+
+This asks Catastro for every plot between Passeig de Gràcia and Bruc, and Gran Via and Aragó, and numbers the blocks:
+
+| | Pg. de Gràcia to Pau Claris | Pau Claris to Roger de Llúria | Roger de Llúria to Bruc |
+|---|---|---|---|
+| Gran Via to Diputació | 1 | 2 | 3 |
+| Diputació to Consell de Cent | 4 | 5 | 6 |
+| Consell de Cent to Aragó | 7 | 8 | 9 |
+
+It finds the blocks from the streets their addresses are on, so neighbouring blocks (Rambla de Catalunya, Girona, Casp, València sides) are left out. It takes a few minutes the first time (one Catastro call per plot); answers are cached in `address_cache.json`.
+
+Outputs in `data\roof_test_set`: `roof_test_set.csv` (address, block, block_name, refcat, lat, lon, plot_m2), `roof_test_set.geojson` (QGIS) and `roof_test_set.png`. Check the PNG first: 9 coloured blocks in a 3 x 3 grid, numbered as above. The end of the printout lists each block with its number of plots and warns if it did not find exactly 9.
+
 ## All roofs, ranked
 
 ```
 python -m step4.batch roofs.csv --laz-dir data\lidar --out data\yield
 ```
 
-`roofs.csv` has the columns `address,block`, the same file used for step 2 chips. `data\yield\ranking.csv` lists every roof from most to least yearly kWh. A roof that fails is listed with its error.
+For the whole test set: `python -m step4.batch data\roof_test_set\roof_test_set.csv --laz-dir data\lidar --out data\yield`. Rows with `lat` and `lon` are found from that point, so Catastro's address spelling doesn't matter. A hand-made `roofs.csv` with just `address,block` still works. `data\yield\ranking.csv` lists every roof from most to least yearly kWh. A roof that fails is listed with its error.
 
 ## How the calculation works
 

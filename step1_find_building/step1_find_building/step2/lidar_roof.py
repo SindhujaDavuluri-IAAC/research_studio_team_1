@@ -11,8 +11,14 @@ raster form:
 3. Surfaces of at least 20 m2 are usable roof levels (main terrace, set-back
    top floor). Everything else on the roof is an obstacle: stair housings,
    lift rooms, tanks, AC units, parapets.
-4. Usable area = surfaces, minus a strip along the roof edge and a clearance
-   around each obstacle.
+4. Lower roofs: surfaces more than LOWER_ROOF_DROP_M below the main roof level
+   (the highest surface holding at least 10% of the flat area) are marked
+   "lower". In the Eixample these are mostly single-storey shops, garages and
+   extensions in the inner block that belong to the same plot. They are not
+   counted as usable by default (shaded, hard to reach, and the city may want
+   them back as courtyards), but their area is reported so that is a choice.
+5. Usable area = main-level surfaces, minus a strip along the roof edge and a
+   clearance around each obstacle.
 
 LiDAR misses objects under about 0.5 m2 and things that barely stick out
 (skylights, existing panels). That gap is what the photo model fills.
@@ -42,6 +48,11 @@ EDGE_SETBACK_M = 1.0      # keep panels this far from the roof edge
 OBSTACLE_CLEARANCE_M = 0.5
 PANEL_WIDTH_M = 1.0       # usable strips narrower than a panel are dropped
 MIN_PATCH_M2 = 2.0        # usable pieces smaller than one panel are dropped
+LOWER_ROOF_DROP_M = 7.0   # surfaces this far (about 2 floors) below the main roof are "lower roofs"
+INCLUDE_LOWER_ROOFS = False
+# Roofs checked by hand and already in use (sports courts, gardens, terraces):
+# a CSV with columns refcat,reason. Their usable area is set to zero.
+EXCLUSIONS_PATH = "data/roof_exclusions.csv"
 
 
 @dataclass
@@ -53,6 +64,7 @@ class LidarRoof:
     obstacle: np.ndarray        # bool: on the roof but not on a surface
     usable: np.ndarray          # bool: surface after edge setback and clearances
     summary: dict = field(default_factory=dict)
+    lower: np.ndarray = None    # bool: cells on a lower roof (see LOWER_ROOF_DROP_M)
 
 
 def rasterise_max(points, grid):
@@ -101,7 +113,16 @@ def grow_surfaces(dsm, res, flat_slope_deg=FLAT_SLOPE_DEG, tol=HEIGHT_TOL):
     return labels
 
 
-def read_roof_lidar(footprint, points, res=GRID_RES):
+def lower_surfaces(surfaces, drop_m=LOWER_ROOF_DROP_M):
+    """Indices of surfaces more than drop_m below the main roof level."""
+    if not surfaces:
+        return []
+    total = sum(x["area_m2"] for x in surfaces)
+    main = max(x["height_m"] for x in surfaces if x["area_m2"] >= 0.1 * total)
+    return [i for i, x in enumerate(surfaces) if x["height_m"] < main - drop_m]
+
+
+def read_roof_lidar(footprint, points, res=GRID_RES, include_lower=None):
     """footprint: shapely polygon (EPSG:25831); points: N x 3 building points."""
     grid = Grid.around(footprint, res)
     roof = grid.mask(footprint)
@@ -121,6 +142,10 @@ def read_roof_lidar(footprint, points, res=GRID_RES):
         surfaces.append({"height_m": round(float(np.median(dsm[cells])), 2),
                          "area_m2": round(float(n * grid.cell_area), 1)})
 
+    low_ids = lower_surfaces(surfaces)
+    for i, x in enumerate(surfaces):
+        x["level"] = "lower" if i in low_ids else "main"
+    lower = np.isin(surface_id, low_ids)
     obstacle = has & roof & (surface_id < 0)
     on_surface = surface_id >= 0
     obstacles, noise_m2 = [], 0.0
@@ -139,7 +164,8 @@ def read_roof_lidar(footprint, points, res=GRID_RES):
                           "height_m": round(float(np.nanmax(dsm[cells]) - base), 2),
                           "x": round(float(x), 2), "y": round(float(y), 2)})
 
-    usable = usable_mask(roof, on_surface, obstacle, res)
+    include_lower = INCLUDE_LOWER_ROOFS if include_lower is None else include_lower
+    usable = usable_mask(roof, on_surface if include_lower else on_surface & ~lower, obstacle, res)
     roof_cells = int(roof.sum())
     summary = {
         "roof_area_m2": round(roof_cells * grid.cell_area, 1),
@@ -150,8 +176,10 @@ def read_roof_lidar(footprint, points, res=GRID_RES):
         "noise_area_m2": round(noise_m2, 1),
         "free_area_m2": round(float(on_surface.sum() * grid.cell_area), 1),
         "usable_area_m2": round(float(usable.sum() * grid.cell_area), 1),
+        "lower_roof_m2": round(float(lower.sum() * grid.cell_area), 1),
+        "lower_roofs_included": bool(include_lower),
     }
-    return LidarRoof(grid, roof, dsm, surface_id, obstacle, usable, summary)
+    return LidarRoof(grid, roof, dsm, surface_id, obstacle, usable, summary, lower)
 
 
 def usable_mask(roof, free, obstacle, res,
@@ -188,8 +216,30 @@ def roof_points(footprint, tiles, classes=ROOF_CLASSES):
     return np.vstack(chunks) if chunks else np.empty((0, 3))
 
 
-def read_roof_from_tiles(footprint, laz_dir):
+def load_exclusions(path=EXCLUSIONS_PATH):
+    """{refcat (14 characters): reason} from the hand-checked exclusion list, if it exists."""
+    import csv
+    from pathlib import Path
+    if not path or not Path(path).exists():
+        return {}
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        return {r["refcat"].strip()[:14].upper(): (r.get("reason") or "excluded").strip()
+                for r in csv.DictReader(f) if r.get("refcat", "").strip()}
+
+
+def apply_exclusion(lroof, refcat, exclusions):
+    """Zero the usable area of a roof on the exclusion list (keeps the rest of the reading)."""
+    reason = exclusions.get((refcat or "")[:14].upper())
+    if reason and lroof is not None:
+        lroof.usable = np.zeros_like(lroof.usable)
+        lroof.summary["usable_area_m2"] = 0.0
+        lroof.summary["excluded"] = reason
+    return lroof
+
+
+def read_roof_from_tiles(footprint, laz_dir, refcat=None, exclusions_path=EXCLUSIONS_PATH):
     tiles = step1_lidar.find_tiles(footprint, laz_dir)
     if not tiles:
         return None
-    return read_roof_lidar(footprint, roof_points(footprint, tiles))
+    lroof = read_roof_lidar(footprint, roof_points(footprint, tiles))
+    return apply_exclusion(lroof, refcat, load_exclusions(exclusions_path))

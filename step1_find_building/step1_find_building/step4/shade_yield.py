@@ -116,7 +116,7 @@ def panels_png(footprint, usable, layout, kwh, path, dropped=(), px_per_m=10):
 def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
                 weather_path=DEFAULT_PATH, out="roof", max_shade_loss=MAX_SHADE_LOSS):
     record, fp = find_building(address, lat, lon)
-    lroof = read_roof_from_tiles(fp, laz_dir)
+    lroof = read_roof_from_tiles(fp, laz_dir, refcat=record.refcat)
     if lroof is None:
         raise SystemExit("No LiDAR tile in --laz-dir covers this building. Download the tile first.")
     if not Path(weather_path).exists():

@@ -40,7 +40,10 @@ def combine(lroof, probs):
     area = fine.cell_area
     roof = upsample(lroof.roof, FACTOR)
     lidar_obstacle = upsample(lroof.obstacle, FACTOR)
-    lidar_surface = upsample(lroof.surface_id >= 0, FACTOR)
+    main_level = lroof.surface_id >= 0
+    if lroof.lower is not None and not lroof.summary.get("lower_roofs_included"):
+        main_level &= ~lroof.lower
+    lidar_surface = upsample(main_level, FACTOR)
     ai = probs.argmax(0)
     ai_obstacle = roof & (ai == CLASSES.index("obstacle"))
     ai_panel = roof & (ai == CLASSES.index("solar_panel"))
@@ -48,6 +51,8 @@ def combine(lroof, probs):
     obstacle = roof & (lidar_obstacle | ai_obstacle | ai_panel)
     free = roof & lidar_surface & ~obstacle
     usable = usable_mask(roof, free, obstacle, fine.res)
+    if lroof.summary.get("excluded"):
+        usable = np.zeros_like(usable)
 
     certainty = float(probs.max(0)[roof].mean()) if roof.any() else 0.0
     ai_any = ai_obstacle | ai_panel
@@ -89,6 +94,8 @@ def lidar_only(lroof):
         "obstacle_area_m2": s["obstacle_area_m2"],
         "existing_panels_m2": None,  # LiDAR can't tell panels from roof
         "confidence": "medium" if coverage_ok else "low",
+        "lower_roof_m2": s.get("lower_roof_m2"),
+        "excluded": s.get("excluded"),
     }
     return summary, lroof.usable, None, lroof.grid
 
@@ -127,7 +134,7 @@ def height_image(height, roof, path):
 
 def read_roof(laz_dir, address=None, lat=None, lon=None, model_path=None, out="roof", web_dir=None):
     record, fp = find_building(address, lat, lon)
-    lroof = read_roof_from_tiles(fp, laz_dir)
+    lroof = read_roof_from_tiles(fp, laz_dir, refcat=record.refcat)
     if lroof is None:
         raise SystemExit("No LiDAR tile in --laz-dir covers this building. Download the tile first.")
     fine = lroof.grid.finer(FACTOR)

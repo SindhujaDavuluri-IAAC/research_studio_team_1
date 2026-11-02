@@ -82,3 +82,38 @@ def test_usable_mask_setback_and_clearance():
     assert not u[2:4, :].any() and u[4, 6]    # the first 1 m (2 cells) from the edge is excluded
     assert u[6, 6]
     assert not u[8, 9] and not u[11, 10]      # next to the obstacle
+
+
+def test_lower_roof_in_the_plot_is_reported_but_not_usable():
+    x, y, z = _roof()
+    z = _with(x, y, z, 10, 0, 10, 15, 5.0)    # back half: single-storey roof 20 m lower (150 m2)
+    pts = np.column_stack([x, y, z])
+    r = read_roof_lidar(FP, pts)
+    s = r.summary
+    assert sorted(srf["level"] for srf in s["surfaces"]) == ["lower", "main"]
+    assert 140 <= s["lower_roof_m2"] <= 155 and not s["lower_roofs_included"]
+    assert not (r.usable & r.lower).any()
+    with_lower = read_roof_lidar(FP, pts, include_lower=True).summary
+    assert with_lower["usable_area_m2"] > s["usable_area_m2"] + 80
+
+
+def test_set_back_top_floor_is_not_a_lower_roof():
+    x, y, z = _roof()
+    z = _with(x, y, z, 0, 0, 20, 6, 28.0)     # top floor 3 m higher than the main terrace
+    s = read_roof_lidar(FP, np.column_stack([x, y, z])).summary
+    assert all(srf["level"] == "main" for srf in s["surfaces"]) and s["lower_roof_m2"] == 0
+
+
+def test_roof_on_the_exclusion_list_has_no_usable_area(tmp_path):
+    from step2.lidar_roof import apply_exclusion, load_exclusions
+    path = tmp_path / "roof_exclusions.csv"
+    path.write_text("refcat,reason\n0328601DF3802G,rooftop sports court\n", encoding="utf-8")
+    ex = load_exclusions(path)
+    x, y, z = _roof()
+    r = read_roof_lidar(FP, np.column_stack([x, y, z]))
+    assert r.summary["usable_area_m2"] > 100
+    apply_exclusion(r, "0328601DF3802G", ex)
+    assert r.summary["usable_area_m2"] == 0 and not r.usable.any()
+    assert r.summary["excluded"] == "rooftop sports court"
+    other = apply_exclusion(read_roof_lidar(FP, np.column_stack([x, y, z])), "0629625DF3802H", ex)
+    assert other.summary["usable_area_m2"] > 100 and "excluded" not in other.summary
