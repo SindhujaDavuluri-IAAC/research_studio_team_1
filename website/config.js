@@ -28,8 +28,7 @@ window.APP_CONFIG = {
   SHARING_FILE: "data/sharing.json",
 
   // ---- Area screen ----
-  // Roof colours: kWh a year per m² of roof, from step 4. The 4 limits make 5 colours, shade to full sun.
-  POTENTIAL_BREAKS: [10, 25, 40, 60],
+  // Building colours, from the worst 20% for solar panels to the best 20% (kWh a year per m² of roof).
   POTENTIAL_COLORS: ["#7d8a99", "#c2a26b", "#eaa733", "#f6c444", "#ffe27a"],
   HOME_KWH_YEAR: 2500,             // ASSUMPTION: one home's yearly use (step 5's typical 85 m² flat), for "homes it could power"
 
@@ -49,6 +48,7 @@ window.APP_CONFIG = {
   PERFORMANCE_RATIO: 0.8,          // losses: heat, inverter, cables, dirt
   PANEL_HEIGHT_ABOVE_ROOF_M: 0.5,
   ROOF_SETBACK_M: 1.0,             // free strip along the roof edge and courtyards (parapet, safety, access)
+  PANEL_PACKING: 0.9,              // share of the free roof the panels cover in the quick estimate (flat panels, small gaps)
   OBSTACLE_FACTOR: 0.75,           // ASSUMPTION: 25% of slots lost to stairs, tanks, AC units. The AI roof reading will replace this.
 
   // ---- Buildings and demand ----

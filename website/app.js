@@ -2,7 +2,8 @@
  * 3D model and building data: Ajuntament de Barcelona open services (geo.bcn.cat), shown with the ArcGIS Maps SDK.
  *
  * Four tabs (top bar):
- *  - Area:     roofs run by our pipeline coloured on the real 3D model, block numbers, totals, best roofs.
+ *  - Area:     every building of the study area coloured from the best 20% for solar panels to the worst 20%
+ *              (our pipeline's result where it ran, a quick estimate elsewhere); click one for its rating.
  *  - Building: the Roof Report of one roof (click a roof, search, or pick a best roof).
  *  - Sharing:  step 5's sharing groups on the map, with their numbers.
  *  - How it works: the problem and the five steps, over the map.
@@ -23,10 +24,15 @@ require([
   "esri/layers/OpenStreetMapLayer",
   "esri/layers/GraphicsLayer",
   "esri/Graphic",
+  "esri/layers/FeatureLayer",
+  "esri/geometry/Polygon",
+  "esri/layers/support/SceneFilter",
+  "esri/geometry/projection",
   "esri/widgets/ShadowCast",
   "esri/widgets/Expand",
   "esri/core/reactiveUtils",
-], function (Map, Basemap, SceneView, SceneLayer, VectorTileLayer, OpenStreetMapLayer, GraphicsLayer, Graphic, ShadowCast, Expand, reactiveUtils) {
+], function (Map, Basemap, SceneView, SceneLayer, VectorTileLayer, OpenStreetMapLayer, GraphicsLayer, Graphic,
+  FeatureLayer, Polygon, SceneFilter, projection, ShadowCast, Expand, reactiveUtils) {
   "use strict";
   const CFG = window.APP_CONFIG;
   const S = window.Solar;
@@ -88,8 +94,16 @@ require([
   const readings = {};      // refcat -> roof file ("Map" is the ArcGIS map class in this file)
   const time = { month: 5, hour: 13 };
   let panelGraphics = [];
+  let rating = null;        // Area tab: { items, rated, byK, exact } — every building of the study area, rated
+  let potentialLayer = null; // Area tab: those buildings as coloured 3D volumes
+  let cityFilter = null;    // hides the city's own model where our coloured volumes stand
+  let picked = null;        // the building clicked in the Area tab
+  let pickHandle = null;    // its highlight on the map
+  let areaError = null;     // why the study area could not be loaded, if it could not
+  const STUDY_RADIUS_M = 350, STUDY_MARGIN_M = 100;   // without data/buildings.json: what to load from the city
+  const RATING_NAMES = ["Best 20%", "Good", "Middle", "Below average", "Worst 20%"];
+  const NOT_RATED = "#e6ddd6";
   const absolute = { mode: "absolute-height" };
-  const areaLayer = new GraphicsLayer({ elevationInfo: absolute, title: "Roof potential" });
   const labelLayer = new GraphicsLayer({ elevationInfo: absolute, title: "Block numbers" });
   const shareLayer = new GraphicsLayer({ elevationInfo: absolute, title: "Sharing groups" });
   const roofLayer = new GraphicsLayer({ elevationInfo: absolute, title: "Selected roof" });
@@ -325,13 +339,17 @@ require([
 
   /* ---------- click -> building ---------- */
   async function onClick(event) {
-    let pt = event.mapPoint;
+    let pt = event.mapPoint, hitK = null;
     try {
-      const hit = await view.hitTest(event, sceneLayer ? { include: [sceneLayer] } : undefined);
+      const layers = [sceneLayer, potentialLayer].filter(Boolean);
+      const hit = await view.hitTest(event, layers.length ? { include: layers } : undefined);
       const r = hit.results.find((x) => x.mapPoint);
       if (r) pt = r.mapPoint;
+      const g = hit.results.find((x) => x.graphic && x.graphic.layer === potentialLayer);
+      if (g && g.graphic.attributes) hitK = g.graphic.attributes.k;
     } catch (_) { /* use the ground point */ }
     if (!pt) return;
+    if (tab === "area") { pickInArea(pt.longitude, pt.latitude, hitK); return; }
     searchLabel = null;
     try {
       await selectAt(pt.longitude, pt.latitude);
@@ -472,6 +490,8 @@ require([
   const isPipeline = () => !!sel && sel.source === "pipeline";
   const obstacleFactor = () => (sel && sel.reading ? 1 : CFG.OBSTACLE_FACTOR);
   const panelKwh = (s) => (s.kwh != null ? s.kwh : S.panelYearKwh(s, CFG));
+  // Quick estimates scaled to match our pipeline (see rateArea); 1 until some roof has been run.
+  const quickScale = () => (rating && rating.factor) || 1;
 
   /* ---------- analysis + drawing (Building tab) ---------- */
   async function analyze(k) {
@@ -664,7 +684,7 @@ require([
     sel.slots.forEach((s, j) => { if (panelGraphics[j]) panelGraphics[j].visible = s.sunFactor >= min; });
 
     const panelArea = CFG.PANEL_LENGTH_M * CFG.PANEL_WIDTH_M;
-    const factor = pipe ? 1 : obstacleFactor();
+    const factor = pipe ? 1 : obstacleFactor() * quickScale();
     const energy = kept.reduce((sum, s) => sum + panelKwh(s), 0) * factor;
     const panels = Math.round(kept.length * factor);
     const kwpEach = pipe && sel.reading.energy.panels
@@ -728,7 +748,7 @@ require([
 
   function fillAssumptions() {
     const loaded = area.local
-      ? `buildings from our study-area file (${fmt(area.buildings.length)} buildings${area.made ? `, saved ${area.made}` : ""})`
+      ? `the study area's ${fmt(area.buildings.length)} buildings (${area.fromServer ? "loaded from the city server" : `our file${area.made ? `, saved ${area.made}` : ""}`})`
       : `buildings within ${fmt(CFG.LOAD_RADIUS_M)} m loaded from the city server`;
     const common = [
       `Buildings, heights, roof form and use: Ajuntament de Barcelona 3D model (BCN_3DtoFeat).`,
@@ -755,6 +775,9 @@ require([
           ? `Usable roof from step 2 (ICGC LiDAR${sel.reading.roof.method === "lidar + ai" ? " + AI on the orthophoto" : ""}): 1 m from edges, 0.5 m from obstacles, strips narrower than a panel removed.`
           : `${CFG.ROOF_SETBACK_M} m free strip along roof edges and courtyards; ${Math.round((1 - CFG.OBSTACLE_FACTOR) * 100)}% of slots lost to stairs, tanks and AC units (until the pipeline reads the roof).`,
         `Shade: neighbours as flat-topped blocks at their roof height; trees are not included.`,
+        quickScale() !== 1
+          ? `Scaled ×${fmt(quickScale(), 2)} to match our pipeline's results on ${fmt(rating.factorFrom)} roof${rating.factorFrom > 1 ? "s" : ""} (tilted rows and real obstacles make fewer kWh than this estimate's flat panels).`
+          : `Not yet compared with our pipeline: no roof in the area has been run.`,
         ...common.slice(1),
       ];
     }
@@ -789,33 +812,219 @@ require([
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   }
 
-  /* ---------- Area tab ---------- */
-  function potentialColor(kwhPerM2) {
-    const i = CFG.POTENTIAL_BREAKS.filter((x) => kwhPerM2 >= x).length;
-    return CFG.POTENTIAL_COLORS[i];
+  /* ---------- Area tab: every building of the study area, rated ---------- */
+  // Our study area: data/buildings.json, or (once per visit) the same buildings from the city server.
+  async function ensureStudyArea() {
+    if (localReady) await localReady;
+    if (localArea) return localArea;
+    setStatus("loading", "Loading the study area's buildings from the city server (this is fast once you run python -m web.buildings)…");
+    const { lng, lat } = PLACES.focus;
+    localArea = makeArea(await queryArea(lng, lat, STUDY_RADIUS_M + STUDY_MARGIN_M), lng, lat,
+      { local: true, cover: STUDY_RADIUS_M, fromServer: true });
+    return localArea;
+  }
+
+  // Rate every building in the study area by kWh a year per m² of roof: our pipeline's result where
+  // it ran (exact), the quick estimate elsewhere. Then split them into 5 equal groups, best to worst.
+  async function rateArea() {
+    const a = await ensureStudyArea();
+    const sun = S.fewSun(a.sun);
+    const exact = {};
+    for (const r of doneRoofs()) {
+      const ks = a.byRef[r.refcat] || [];
+      const m2 = ks.reduce((t, k) => t + a.buildings[k].footprint, 0);
+      if (ks.length && m2) exact[r.refcat] = { roof: r, m2 };
+    }
+    const items = [];
+    a.buildings.forEach((b, k) => {
+      // every building the city model hides (it touches the study circle) gets a volume of ours
+      const near = Math.min(...b.xy.map(([x, y]) => Math.hypot(x, y)));
+      if (near > a.cover) return;
+      const inside = Math.hypot(b.c[0], b.c[1]) <= a.cover && b.footprint >= 30 && b.relHeight >= 3;
+      items.push({ k, inside, ref: ref14(b.attrs[F.refcat]) });
+    });
+    const todo = items.filter((it) => it.inside);
+    for (let i = 0; i < todo.length; i++) {
+      const it = todo[i], b = a.buildings[it.k], ex = exact[it.ref];
+      if (ex) {
+        const share = b.footprint / ex.m2;
+        Object.assign(it, { exact: true, roof: ex.roof, kwhPerM2: ex.roof.yearly_kwh / ex.m2,
+          kwhYear: ex.roof.yearly_kwh * share, panels: Math.round((ex.roof.panels || 0) * share) });
+      } else {
+        const q = S.roofPotential(a.buildings, a.index, it.k, sun, CFG);
+        if (q) Object.assign(it, { exact: false, kwhPerM2: q.kwhPerM2, kwhYear: q.kwhYear, panels: q.panels });
+      }
+      if (i % 150 === 149) {
+        setStatus("loading", `Rating the roofs of the study area… ${Math.round((100 * i) / todo.length)}%`);
+        await nextFrame();
+      }
+    }
+    // Our pipeline (tilted rows, real obstacles) makes fewer kWh per m² than the quick estimate (flat panels,
+    // a fixed obstacle allowance). So that both can share one ranking, the quick estimates are scaled by the
+    // median ratio pipeline ÷ quick estimate on the roofs that have both.
+    const ratios = [];
+    for (const ex of Object.values(exact)) {
+      const quick = (a.byRef[ref14(ex.roof.refcat)] || []).map((k) => S.roofPotential(a.buildings, a.index, k, sun, CFG)).filter(Boolean);
+      const q = quick.reduce((t, x) => t + x.kwhYear, 0);
+      if (q > 0) ratios.push(ex.roof.yearly_kwh / q);
+    }
+    ratios.sort((p, q) => p - q);
+    const mid = Math.floor(ratios.length / 2);
+    const median = ratios.length % 2 ? ratios[mid] : (ratios[mid - 1] + ratios[mid]) / 2;
+    const factor = ratios.length ? Math.min(2, Math.max(0.2, median)) : 1;
+    for (const it of todo) {
+      if (it.exact || it.kwhPerM2 == null) continue;
+      it.kwhPerM2 *= factor; it.kwhYear *= factor; it.panels = Math.round(it.panels * factor);
+    }
+    const rated = todo.filter((it) => it.kwhPerM2 != null).sort((p, q) => q.kwhPerM2 - p.kwhPerM2);
+    rated.forEach((it, i) => { it.rank = i + 1; it.cls = Math.min(4, Math.floor((5 * i) / rated.length)); });
+    const byK = {};
+    items.forEach((it, i) => { it.oid = i + 1; byK[it.k] = it; });
+    rating = { items, rated, byK, exact: rated.filter((it) => it.exact).length, factor, factorFrom: ratios.length };
+  }
+
+  const ratingColor = (it) => (it && it.cls != null ? CFG.POTENTIAL_COLORS[4 - it.cls] : NOT_RATED);
+  const volume = (hex) => ({
+    type: "polygon-3d",
+    symbolLayers: [{ type: "extrude", material: { color: hexRgb(hex) }, edges: { type: "solid", color: [60, 40, 30, 0.35], size: 0.6 } }],
+  });
+  const closed = (ll) => [...ll, ll[0]];
+
+  // The rated buildings as whole 3D volumes, from the ground to the roof, in their rating colour.
+  function buildPotentialLayer() {
+    if (potentialLayer) view.map.remove(potentialLayer);
+    const a = localArea;
+    const graphics = rating.items.map((it) => {
+      const b = a.buildings[it.k];
+      return new Graphic({
+        geometry: new Polygon({ rings: [closed(b.ll), ...(b.holesLL || []).map(closed)], spatialReference: SR }),
+        attributes: { oid: it.oid, k: it.k, cls: it.cls == null ? -1 : it.cls, h: Math.max(1, b.relHeight), base: b.height - b.relHeight },
+      });
+    });
+    potentialLayer = new FeatureLayer({
+      title: "Roof rating", source: graphics, objectIdField: "oid", geometryType: "polygon", spatialReference: SR,
+      fields: [{ name: "oid", type: "oid" }, { name: "k", type: "integer" }, { name: "cls", type: "integer" },
+        { name: "h", type: "double" }, { name: "base", type: "double" }],
+      outFields: ["*"], popupEnabled: false, visible: tab === "area",
+      elevationInfo: { mode: "absolute-height", featureExpressionInfo: { expression: "$feature.base" }, unit: "meters" },
+      renderer: {
+        type: "unique-value", field: "cls", defaultSymbol: volume(NOT_RATED),
+        uniqueValueInfos: [0, 1, 2, 3, 4].map((c) => ({ value: c, label: RATING_NAMES[c], symbol: volume(CFG.POTENTIAL_COLORS[4 - c]) })),
+        visualVariables: [{ type: "size", field: "h", valueUnit: "meters" }],
+      },
+    });
+    view.map.add(potentialLayer);
+  }
+
+  // Hide the city's model inside the study circle while the Area tab shows our coloured volumes there.
+  async function makeCityFilter() {
+    if (!sceneLayer || !localArea) return null;
+    try {
+      const ring = [];
+      for (let d = 0; d <= 360; d += 5) {
+        const t = (d * Math.PI) / 180;
+        ring.push(localArea.proj.toLngLat(localArea.cover * Math.sin(t), localArea.cover * Math.cos(t)));
+      }
+      let poly = new Polygon({ rings: [ring], spatialReference: SR });
+      const sr = sceneLayer.spatialReference;
+      if (sr && !sr.isWGS84) {
+        await projection.load();
+        poly = projection.project(poly, sr);
+      }
+      return new SceneFilter({ geometries: [poly], spatialRelationship: "disjoint" });
+    } catch (err) {
+      console.warn("Could not hide the city model in the study area; it is hidden everywhere in Area instead.", err);
+      return null;
+    }
+  }
+
+  function showCityModel(areaTab) {
+    if (!sceneLayer) return;
+    const ours = areaTab && potentialLayer;
+    sceneLayer.filter = ours && cityFilter ? cityFilter : null;
+    sceneLayer.visible = !(ours && !cityFilter);
+  }
+
+  // A click in the Area tab: the building's rating in the panel, highlighted on the map.
+  function pickInArea(lng, lat, k = null) {
+    if (!rating) { setStatus("loading", "Still rating the roofs… one moment."); return; }
+    if (k == null) {
+      const [x, y] = localArea.proj.toXY(lng, lat);
+      k = S.findBuilding(localArea.buildings, localArea.index, x, y, 3);
+    }
+    const it = k != null && k >= 0 ? rating.byK[k] : null;
+    if (!it) {
+      setStatus("idle", "That building is outside our 9 blocks. Open the Building tab and click it there for a quick estimate.");
+      return;
+    }
+    picked = it;
+    if (pickHandle) pickHandle.remove();
+    view.whenLayerView(potentialLayer).then((lv) => { pickHandle = lv.highlight(it.oid); }).catch(() => {});
+    fillPick();
+  }
+
+  function fillPick() {
+    const it = picked;
+    $("a-pick").hidden = !it;
+    if (!it) return;
+    const b = localArea.buildings[it.k];
+    $("a-pick-title").textContent = it.roof && it.roof.address ? cleanAddress(it.roof.address)
+      : it.ref ? `Cadastral ref. ${it.ref}` : `City building ${b.id}`;
+    $("a-pick-swatch").style.setProperty("--c", ratingColor(it));
+    $("a-pick-rank").textContent = it.cls != null
+      ? `${RATING_NAMES[it.cls]} · number ${fmt(it.rank)} of ${fmt(rating.rated.length)}`
+      : "Not rated: too small, or outside the 9 blocks";
+    $("a-pick-m2").textContent = it.kwhPerM2 != null ? `${fmt(it.kwhPerM2)} kWh` : "–";
+    $("a-pick-year").textContent = it.kwhYear != null ? `${fmt(it.kwhYear)} kWh` : "–";
+    $("a-pick-panels").textContent = it.panels != null ? fmt(it.panels) : "–";
+    $("a-pick-src").textContent = it.exact ? "Our pipeline" : it.kwhPerM2 != null ? "Quick estimate" : "–";
+    $("a-pick-floor").textContent = `${fmt(b.relHeight, 1)} m high · about ${b.floors} floors · roof ${fmt(b.footprint)} m²`;
+  }
+
+  function openPicked() {
+    if (!picked) return;
+    area = localArea;
+    searchLabel = picked.roof && picked.roof.address ? cleanAddress(picked.roof.address) : null;
+    analyze(picked.k).catch((err) => setStatus("error", err.message));
   }
 
   function fillArea() {
-    const done = doneRoofs();
     const rule = sharing && sharing.rules && (sharing.rules["500"] || currentRule());
     const t = rule && rule.totals;
-    $("a-cover").textContent = t && t.covered_pct != null ? `${fmt(t.covered_pct, 1)}%` : "–";
+    const rated = rating ? rating.rated : [];
     if (t && t.covered_pct != null) {
+      $("a-source").textContent = "Our pipeline · step 5";
+      $("a-source").dataset.kind = "pipeline";
+      $("a-cover").textContent = `${fmt(t.covered_pct, 1)}%`;
       $("a-cover-note").textContent = `from solar panels on their own roofs, after sharing between buildings (step 5, ${ruleLabel(sharing.rules["500"] ? "500" : ruleKey)} rule). Without sharing: ${fmt(t.covered_alone_pct, 1)}%.`;
+    } else if (rated.length) {
+      const energy = rated.reduce((s, it) => s + it.kwhYear, 0);
+      const demand = rated.reduce((s, it) => s + localArea.buildings[it.k].demand, 0);
+      $("a-source").textContent = rating.exact ? `Quick estimate · ${fmt(rating.exact)} roofs exact from our pipeline` : "Quick estimate";
+      $("a-source").dataset.kind = "estimate";
+      $("a-cover").textContent = demand ? `≈ ${fmt((100 * energy) / demand)}%` : "–";
+      $("a-cover-note").replaceChildren("if every rated roof had panels, before sharing. The exact share comes from step 5 (",
+        el("code", { text: "python -m step5.sharing" }), ", then ", el("code", { text: "python -m web.sharing" }), ").");
     } else {
-      $("a-cover-note").replaceChildren("Appears after step 5. In pipeline/: ", el("code", { text: "python -m step5.sharing" }), ", then ", el("code", { text: "python -m web.sharing" }), ".");
+      $("a-source").textContent = "";
+      $("a-cover").textContent = "–";
+      if (areaError) {
+        $("a-cover-note").replaceChildren(`Could not load the study area's buildings (${areaError}) Make the area file once, in pipeline/: `,
+          el("code", { text: "python -m web.buildings" }), ", then reload the page.");
+      } else {
+        $("a-cover-note").textContent = rating ? "No building to rate in the study area." : "Rating the roofs of the study area…";
+      }
     }
-    const energy = done.reduce((s, r) => s + r.yearly_kwh, 0);
-    const panels = done.reduce((s, r) => s + (r.panels || 0), 0);
-    $("a-roofs").textContent = t && t.buildings ? `${fmt(done.length)} of ${fmt(t.buildings)}` : fmt(done.length);
-    $("a-panels").textContent = done.length ? fmt(panels) : "–";
-    $("a-energy").textContent = done.length ? kwhToMwh(energy) : "–";
-    $("a-homes").textContent = done.length ? fmt(energy / CFG.HOME_KWH_YEAR) : "–";
+    const energy = rated.reduce((s, it) => s + it.kwhYear, 0);
+    $("a-roofs").textContent = rated.length ? `${fmt(rated.length)}${rating.exact ? ` (${fmt(rating.exact)} exact)` : ""}` : "–";
+    $("a-panels").textContent = rated.length ? fmt(rated.reduce((s, it) => s + (it.panels || 0), 0)) : "–";
+    $("a-energy").textContent = rated.length ? (energy >= 1e6 ? `${fmt(energy / 1e6, 1)} GWh` : kwhToMwh(energy)) : "–";
+    $("a-homes").textContent = rated.length ? fmt(energy / CFG.HOME_KWH_YEAR) : "–";
     $("a-homes-label").title = `at about ${fmt(CFG.HOME_KWH_YEAR)} kWh a year per home (an assumption in config.js)`;
 
-    // block by block
+    // block by block (blocks 1-9 come from the roof test set, through step 4's batch)
     const perBlock = {};
-    for (const r of done) if (r.block) perBlock[r.block] = (perBlock[r.block] || 0) + r.yearly_kwh;
+    for (const r of doneRoofs()) if (r.block) perBlock[r.block] = (perBlock[r.block] || 0) + r.yearly_kwh;
     const max = Math.max(1, ...Object.values(perBlock));
     const any = Object.keys(perBlock).length > 0;
     $("a-blocks").replaceChildren(...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => {
@@ -824,45 +1033,42 @@ require([
       if (v) bar.firstChild.style.setProperty("--h", `${Math.round((100 * v) / max)}%`);
       return bar;
     }));
-    $("a-blocks-note").textContent = any ? "Blocks numbered as in the roof test set: row 1 is Gran Via–Diputació, row 3 Consell de Cent–Aragó." :
-      "Blocks fill in when step 4's batch runs the roof test set with --web.";
+    $("a-blocks-note").textContent = any ? "Exact results from our pipeline. Blocks as in the roof test set: row 1 is Gran Via–Diputació, row 3 Consell de Cent–Aragó." :
+      "Fills in with exact numbers when step 4's batch runs the roof test set with --web.";
 
-    // best roofs
-    const best = done.slice().sort((p, q) => q.yearly_kwh - p.yearly_kwh).slice(0, 5);
+    // best roofs: the 5 rated buildings that make the most kWh a year
+    const best = rated.slice().sort((p, q) => q.kwhYear - p.kwhYear).slice(0, 5);
     if (!best.length) {
-      $("a-best").replaceChildren(el("p", { class: "note" }, ["No roof has been run with step 4 yet. In pipeline/: ",
-        el("code", { text: "python -m step4.batch data\\roof_test_set\\roof_test_set.csv --laz-dir data\\lidar --out data\\yield_all --web" })]));
+      $("a-best").replaceChildren(el("p", { class: "note", text: areaError ? "The list appears once the study area's buildings load." : rating ? "No building to list yet." : "Rating the roofs…" }));
       return;
     }
-    $("a-best").replaceChildren(...best.map((r, i) => {
+    $("a-best").replaceChildren(...best.map((it, i) => {
+      const b = localArea.buildings[it.k];
+      const swatch = el("i", { class: "swatch" });
+      swatch.style.setProperty("--c", ratingColor(it));
       const btn = el("button", { type: "button" }, [
         el("span", { class: "rank", text: String(i + 1) }),
-        el("span", { class: "name" }, [cleanAddress(r.address || r.refcat), el("small", { text: `${r.block ? `Block ${r.block} · ` : ""}${fmt(r.panels || 0)} panels` })]),
-        el("span", { class: "kwh", text: `${fmt(r.yearly_kwh)} kWh` }),
+        el("span", { class: "name" }, [it.roof && it.roof.address ? cleanAddress(it.roof.address) : it.ref ? `Cadastral ref. ${it.ref}` : `City building ${b.id}`,
+          el("small", {}, [swatch, `${RATING_NAMES[it.cls]} · ${it.exact ? "our pipeline" : "quick estimate"}`])]),
+        el("span", { class: "kwh", text: `${fmt(it.kwhYear)} kWh` }),
       ]);
       btn.addEventListener("click", () => {
-        searchLabel = null;
-        selectAt(...roofCenter(r), 25).catch((err) => setStatus("error", err.message));
+        const [lng, lat] = localArea.proj.toLngLat(b.c[0], b.c[1]);
+        pickInArea(lng, lat, it.k);
+        view.goTo({ center: [lng, lat], zoom: 18, tilt: 55 }, { duration: 1000 }).catch(() => {});
       });
       return btn;
     }));
   }
 
-  // Roofs run by the pipeline, coloured on the real model by kWh per m² of roof; block numbers above the blocks.
-  function drawArea() {
-    areaLayer.removeAll();
+  // Block numbers 1-9 above the blocks (from the roof test set, through step 4's batch).
+  function drawBlockLabels() {
     labelLayer.removeAll();
     if (!localArea) return;
     const blocks = {};
-    for (const r of doneRoofs()) {
-      const parts = partsOf(r.refcat);
-      const m2 = parts.reduce((s, p) => s + p.b.footprint, 0);
-      if (!parts.length || !m2) continue;
-      const color = [...hexRgb(potentialColor(r.yearly_kwh / m2)), 0.95];
-      for (const p of parts) areaLayer.add(slab(p.b, p.b.height + 0.05, 0.5, color));
-      if (r.block) (blocks[r.block] = blocks[r.block] || []).push(...parts);
-    }
+    for (const r of doneRoofs()) if (r.block) (blocks[r.block] = blocks[r.block] || []).push(...partsOf(r.refcat));
     for (const [n, parts] of Object.entries(blocks)) {
+      if (!parts.length) continue;
       const lng = parts.reduce((s, p) => s + p.lng, 0) / parts.length;
       const lat = parts.reduce((s, p) => s + p.lat, 0) / parts.length;
       const z = Math.max(...parts.map((p) => p.b.height)) + 8;
@@ -970,11 +1176,13 @@ require([
   /* ---------- tabs and legend ---------- */
   const LEGENDS = {
     area: () => {
-      const b = CFG.POTENTIAL_BREAKS;
-      return `<p class="title">Sun on each roof, kWh per m² a year</p>` +
-        `<div class="scale">${CFG.POTENTIAL_COLORS.map((c) => `<i style="--c:${c}"></i>`).join("")}</div>` +
-        `<div class="ends"><span>under ${b[0]}</span><span>${b[b.length - 1]}+</span></div>` +
-        `<p class="hint">${localArea ? "Only roofs run by our pipeline are coloured. Numbers: blocks 1–9." : "Colours appear after python -m web.buildings (pipeline folder)."}</p>`;
+      const best = CFG.POTENTIAL_COLORS.slice().reverse();
+      return `<p class="title">Best and worst roofs for solar panels</p>` +
+        `<div class="scale">${best.map((c) => `<i style="--c:${c}"></i>`).join("")}</div>` +
+        `<div class="ends"><span>best 20%</span><span>worst 20%</span></div>` +
+        `<p class="row"><i style="--c:${NOT_RATED}"></i>Not rated (small, or outside the 9 blocks)</p>` +
+        `<p class="hint">${rating ? `${fmt(rating.rated.length)} buildings rated by kWh a year per m² of roof: ${fmt(rating.exact)} exact from our pipeline, the rest quick estimates${rating.factor !== 1 ? ` (scaled ×${fmt(rating.factor, 2)} to match the pipeline)` : ""}. Click a building for its rating.`
+          : areaError ? "The study area's buildings could not be loaded: run python -m web.buildings (pipeline folder)." : "Rating the roofs of the study area…"}</p>`;
     },
     building: () => `<p class="title">On the map</p>` +
       `<p class="row"><i style="--c:var(--sel)"></i>Selected roof</p>` +
@@ -1000,7 +1208,9 @@ require([
     $("veil").hidden = !method;
     $("legend").hidden = method;
     if (!method) $("legend").innerHTML = LEGENDS[name]();
-    areaLayer.visible = labelLayer.visible = name === "area";
+    labelLayer.visible = name === "area";
+    if (potentialLayer) potentialLayer.visible = name === "area";
+    showCityModel(name === "area");
     roofLayer.visible = ringLayer.visible = name === "building";
     shareLayer.visible = name === "sharing";
     $("building-empty").hidden = !!sel;
@@ -1086,7 +1296,7 @@ require([
       camera: cameraOver(PLACES.focus),
       padding: { top: 0, left: 0, bottom: 80, right: PANEL_W },
     });
-    map.addMany([areaLayer, labelLayer, shareLayer, roofLayer, ringLayer]);
+    map.addMany([labelLayer, shareLayer, roofLayer, ringLayer]);
     view.ui.move(["zoom", "navigation-toggle", "compass"], "bottom-left");
     addShadowTool();
     fitLayout();
@@ -1097,6 +1307,8 @@ require([
     $("policy-select").addEventListener("change", updateResults);
     $("save-btn").addEventListener("click", saveJson);
     $("search").addEventListener("submit", onSearch);
+    $("a-pick-open").addEventListener("click", openPicked);
+    $("a-pick-close").addEventListener("click", () => { picked = null; if (pickHandle) pickHandle.remove(); fillPick(); });
     buildTimebar();
     setTab("area");
 
@@ -1113,14 +1325,21 @@ require([
     }
     view.on("click", onClick);
     sceneLayer = await addSceneLayer(map);
-    await localReady;
-    drawArea();
+    try {
+      await rateArea();
+      buildPotentialLayer();
+      cityFilter = await makeCityFilter();
+    } catch (err) {
+      areaError = err.message;
+      setStatus("error", "Could not rate the study area: " + err.message);
+      console.error(err);
+    }
+    drawBlockLabels();
     drawSharing();
+    fillArea();
     setTab(tab);
-    const ready = localArea ? ` Our study area is ready (${fmt(localArea.buildings.length)} buildings).` : "";
-    const done = doneRoofs().length;
     if (!sceneLayer) setStatus("error", "The city's 3D model did not load. The calculation still works: click where a building is.");
-    else setStatus("idle", `${done ? `${fmt(done)} roofs run by our pipeline.` : "No roof run by our pipeline yet."}${ready} Click any roof, or type an address.`);
+    else if (rating) setStatus("idle", `${fmt(rating.rated.length)} buildings rated (${fmt(rating.exact)} exact from our pipeline). Click one for its rating, or type an address.`);
   }
 
   main();

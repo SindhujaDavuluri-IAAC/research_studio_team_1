@@ -109,6 +109,16 @@ h1 { margin: 0; font-size: 22px; line-height: 1.25; font-weight: 600; }
 .best-list .name small { font-size: 11px; font-weight: 400; color: var(--muted); }
 .best-list .kwh { font: 500 13px var(--mono); }
 
+/* the building clicked in the Area tab */
+.pick { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.pick-rank { display: flex; align-items: center; gap: 8px; font: 500 12px var(--mono); letter-spacing: 0.04em; text-transform: uppercase; }
+.pick-title { font-size: 17px; font-weight: 600; }
+.pick-actions { display: flex; gap: 8px; }
+.pick-actions button { flex: 1; }
+.swatch { display: inline-block; flex: none; width: 14px; height: 14px; border-radius: 3px; background: var(--c); border: 1px solid rgba(0, 0, 0, 0.2); vertical-align: -2px; margin-right: 4px; }
+.primary { height: 40px; border: 0; border-radius: 6px; background: var(--sky); color: #fff; font-weight: 500; cursor: pointer; }
+.primary:hover { background: #184c70; }
+
 /* ---------- building ---------- */
 .source-tag { font: 500 11px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: -8px; }
 .source-tag[data-kind="pipeline"] { color: var(--green); }

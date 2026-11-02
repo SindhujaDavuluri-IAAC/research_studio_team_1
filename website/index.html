@@ -43,13 +43,29 @@
     <section id="tab-area" class="tab" aria-labelledby="area-title">
       <p class="eyebrow">Area · 9 blocks</p>
       <h1 id="area-title">How much of their own electricity can these 9 blocks make?</h1>
+      <div id="a-pick" class="pick" hidden>
+        <p class="pick-rank"><i id="a-pick-swatch" class="swatch"></i><span id="a-pick-rank"></span></p>
+        <p id="a-pick-title" class="pick-title"></p>
+        <p id="a-pick-floor" class="note"></p>
+        <dl class="tiles">
+          <div><dt>Per m² of roof, a year</dt><dd id="a-pick-m2">–</dd></div>
+          <div><dt>Per year</dt><dd id="a-pick-year">–</dd></div>
+          <div><dt>Panels</dt><dd id="a-pick-panels">–</dd></div>
+          <div><dt>From</dt><dd id="a-pick-src">–</dd></div>
+        </dl>
+        <div class="pick-actions">
+          <button id="a-pick-open" type="button" class="primary">Open Roof Report</button>
+          <button id="a-pick-close" type="button" class="secondary">Close</button>
+        </div>
+      </div>
+      <p id="a-source" class="source-tag"></p>
       <div class="hero">
         <span id="a-cover" class="big">–</span>
         <span class="unit">of their yearly use</span>
       </div>
       <p id="a-cover-note" class="note">from solar panels on their own roofs, after sharing between buildings</p>
       <dl class="tiles">
-        <div><dt>Roofs run by our pipeline</dt><dd id="a-roofs">–</dd></div>
+        <div><dt>Buildings rated</dt><dd id="a-roofs">–</dd></div>
         <div><dt>Panels</dt><dd id="a-panels">–</dd></div>
         <div><dt>Energy per year</dt><dd id="a-energy">–</dd></div>
         <div><dt id="a-homes-label">Homes it could power</dt><dd id="a-homes">–</dd></div>
@@ -60,7 +76,7 @@
         <p id="a-blocks-note" class="note"></p>
       </div>
       <div>
-        <p class="subhead">Best roofs</p>
+        <p class="subhead">Best roofs (most kWh a year)</p>
         <div id="a-best" class="best-list"></div>
       </div>
     </section>

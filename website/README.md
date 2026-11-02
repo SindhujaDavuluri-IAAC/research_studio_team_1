@@ -4,7 +4,7 @@ The site shows the **Ajuntament de Barcelona 3D model** with four screens, as ta
 
 | Tab | What it shows | Its data |
 |---|---|---|
-| **Area** | Every roof run by our pipeline, coloured on the real 3D model by kWh per m² of roof; block numbers 1–9; how much of the 9 blocks' own use their roofs can cover; panels, energy, homes; block by block; the best roofs | `data/roofs/index.json` (step 4), `data/sharing.json` (step 5), `data/buildings.json` |
+| **Area** | **Every building of the 9 blocks** as a whole 3D volume, coloured in 5 equal groups from the best 20% for solar panels to the worst 20% (kWh a year per m² of roof). Click a building: its rating, number in the ranking, kWh, panels, and a button to its Roof Report. Panel: how much of the blocks' own use their roofs can cover, totals, block by block, the best roofs | `data/roofs/index.json` (step 4), `data/sharing.json` (step 5), `data/buildings.json` (or the city server) |
 | **Building** | The Roof Report of one roof: panels on the roof, kWh a year, month by month, a typical day, shade, step 5's use and coverage, who gets the energy | `data/roofs/<refcat>.json` |
 | **Sharing** | Step 5's sharing groups on the map (the roof with extra sun in a strong colour, the buildings it supplies in a light one, arcs between them); with and without sharing; one card per group; 500 m / 2 km / 5 km rule | `data/sharing.json` |
 | **How it works** | The problem, and the five steps with real pictures from the pipeline | `img/` |
@@ -22,7 +22,9 @@ Every Roof Report says it at the top:
 | **Our pipeline** (green) | The roof was run by our Python pipeline (steps 2–4) and sent here with `--web`. The page only **shows** its results. Nothing is recalculated in the browser. |
 | **Quick estimate** (grey) | The roof was not run yet. The browser makes a fast estimate (`solar.js`): neighbours as simple blocks, flat panels, 25% of the roof assumed lost to obstacles (or step 2's usable area, if step 2 ran). Good for exploring, not for the final numbers. |
 
-Area and Sharing only use pipeline results. Until those exist, they say which command fills them.
+**Area** rates every building: with our pipeline's result where it ran, and with a quick estimate (sun and shade at a few roof points, `solar.js` → `roofPotential`) everywhere else. The pipeline's tilted rows and real obstacles give fewer kWh per m² than the quick estimate's flat panels, so the quick estimates are scaled to match the pipeline (the median ratio on the roofs that have both; the legend shows the factor). The Roof Report's quick estimate uses the same scale. The more roofs the pipeline runs, the more of the ranking is exact.
+
+**Sharing** only uses step 5's results. Until they exist, it says which command fills it.
 
 ## Run it
 
@@ -79,7 +81,8 @@ Still slow on your laptop? In `config.js`, put the "simple volumes" 3D model fir
 ## Known limits (next steps)
 
 - Panels on lower roof levels are drawn at the top roof height (the numbers are right; only the drawing is flat).
-- Roof colours and sharing groups are drawn only for buildings inside `data/buildings.json`.
+- Area rates the buildings within 350 m of the centre of the 9 blocks. Without `data/buildings.json` it loads them from the city server once per visit (slower); run `python -m web.buildings` once to make it instant.
+- In Area, the city's own model is hidden inside that circle so our coloured volumes show; the volumes are simple (outline × height), without roof details.
 - "Homes it could power" uses one assumption: 2,500 kWh a year per home (`HOME_KWH_YEAR` in `config.js`).
 - The quick estimate's "Who gets the energy" uses yearly totals; step 5 (Sharing tab) does it hour by hour.
 - Values marked ASSUMPTION in `config.js` need sources (PVGIS, Barcelona Energy Observatory).

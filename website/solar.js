@@ -207,10 +207,9 @@
     return false;
   }
 
-  // Share of the open sky dome a point sees (1 = fully open). 16 directions.
-  function skyView(index, buildings, x, y, z, step = 1.5, maxDist = 150) {
+  // Share of the open sky dome a point sees (1 = fully open). N directions (16 by default).
+  function skyView(index, buildings, x, y, z, step = 1.5, maxDist = 150, N = 16) {
     let sum = 0;
-    const N = 16;
     for (let k = 0; k < N; k++) {
       const a = (k / N) * 2 * Math.PI, dx = Math.sin(a), dy = Math.cos(a);
       let tanMax = 0;
@@ -304,6 +303,61 @@
     return { slots, roofArea: footprintArea(b) };
   }
 
+  /* ---------- quick rating of a whole area (Area tab) ---------- */
+  // Every `every`-th sun position, weights renormalised: enough to rank roofs, 4x faster.
+  function fewSun(sun, every = 4) {
+    const few = sun.filter((_, i) => i % every === 0);
+    const total = few.reduce((t, s) => t + s.w, 0) || 1;
+    return few.map((s) => ({ ...s, w: s.w / total }));
+  }
+
+  function perimeter(p) {
+    let L = 0;
+    for (let i = 0, j = p.length - 1; i < p.length; j = i++) L += Math.hypot(p[i][0] - p[j][0], p[i][1] - p[j][1]);
+    return L;
+  }
+
+  // Up to 9 points on the roof, at least the edge setback from every edge and courtyard.
+  function roofPoints(b, setback) {
+    const [x0, y0, x1, y1] = b.bbox;
+    const rings = [b.xy, ...(b.holes || [])];
+    const pts = [];
+    for (const fx of [0.2, 0.5, 0.8]) for (const fy of [0.2, 0.5, 0.8]) {
+      const x = x0 + fx * (x1 - x0), y = y0 + fy * (y1 - y0);
+      if (insideFootprint(x, y, b) && rings.every((r) => minEdgeDistance(x, y, r) >= setback)) pts.push([x, y]);
+    }
+    if (!pts.length) {
+      const [cx, cy] = b.c;
+      if (insideFootprint(cx, cy, b)) pts.push([cx, cy]);
+    }
+    return pts;
+  }
+
+  // Quick rating of one roof, to colour a whole area: sun and shade at a few roof points, the roof
+  // minus its edge strip and the obstacle allowance, flat panels. Same assumptions as the quick
+  // estimate in the Roof Report, so the two agree roughly. kwhPerM2 = kWh a year per m² of roof.
+  function roofPotential(buildings, index, k, sun, cfg) {
+    const b = buildings[k];
+    const pts = roofPoints(b, cfg.ROOF_SETBACK_M);
+    if (!pts.length) return null;
+    const z = b.height + cfg.PANEL_HEIGHT_ABOVE_ROOF_M, kd = cfg.DIFFUSE_FRACTION;
+    let factor = 0;
+    for (const [x, y] of pts) {
+      let lit = 0;
+      for (const s of sun) if (!isShaded(index, buildings, x, y, z, s, 1.5)) lit += s.w;
+      factor += (1 - kd) * lit + kd * skyView(index, buildings, x, y, z, 2, 120, 8);
+    }
+    const sunFactor = factor / pts.length;
+    const edge = [b.xy, ...(b.holes || [])].reduce((t, r) => t + perimeter(r), 0) * cfg.ROOF_SETBACK_M;
+    const usableM2 = Math.max(0, b.footprint - edge) * cfg.OBSTACLE_FACTOR;
+    const panelM2 = usableM2 * (cfg.PANEL_PACKING || 0.9);
+    const kwhYear = panelM2 * cfg.GHI_KWH_M2_YEAR * sunFactor * cfg.PANEL_EFFICIENCY * cfg.PERFORMANCE_RATIO;
+    return {
+      sunFactor, usableM2, kwhYear, kwhPerM2: b.footprint ? kwhYear / b.footprint : 0,
+      panels: Math.floor(panelM2 / (cfg.PANEL_LENGTH_M * cfg.PANEL_WIDTH_M)),
+    };
+  }
+
   /* ---------- energy and demand ---------- */
   function panelYearKwh(slot, cfg) {
     return slot.kwhM2 * cfg.PANEL_LENGTH_M * cfg.PANEL_WIDTH_M * cfg.PANEL_EFFICIENCY * cfg.PERFORMANCE_RATIO;
@@ -345,6 +399,7 @@
   const api = {
     makeProjection, polygonArea, footprintArea, insideFootprint, centroid, pointInPolygon, bbox, cleanRing, buildIndex, findBuilding,
     sunPosition, sunSamples, isShaded, skyView, insideUsable, panelSlots, analyzeRoof, panelYearKwh, buildingDemand, allocate,
+    fewSun, roofPotential,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Solar = api;
