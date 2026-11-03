@@ -5,6 +5,10 @@ Usually you don't call this yourself: add --web to step 2 or step 4 and it runs.
     python -m step4.shade_yield "Carrer de Roger de Llúria 56, Barcelona" --laz-dir data\\lidar --out lluria56 --web
     python -m step4.batch roofs.csv --laz-dir data\\lidar --web
     python -m web.export lluria56          # send a roof you already ran, again
+    python -m web.export --all data\\yield_all   # send every roof step 4 already ran in that folder
+
+Results saved before --web existed work too (no need to run the LiDAR again): their
+panels, kWh and shade go to the map; the usable-area outline only if the folder has it.
 
 For each roof it writes website/data/roofs/<refcat>.json and refreshes
 website/data/roofs/index.json (the list of roofs the map knows).
@@ -87,8 +91,9 @@ def web_reading(result, usable_fc, energy=None, extra=None):
     usable = []
     for f in usable_fc.get("features", []):
         usable += _polygons(shape(f["geometry"]))
+    lidar = result.get("lidar") or {}
     obstacles = []
-    for o in result["lidar"].get("obstacles", []):
+    for o in lidar.get("obstacles", []):
         lng, lat = TO_LNGLAT.transform(o["x"], o["y"])
         obstacles.append({"lng": round(lng, 7), "lat": round(lat, 7),
                           "area_m2": o["area_m2"], "height_m": o["height_m"]})
@@ -101,8 +106,8 @@ def web_reading(result, usable_fc, energy=None, extra=None):
         "refcat": b["refcat"][:14],
         "address": b.get("address"),
         "roof": result["roof"],
-        "roof_area_m2": result["lidar"].get("roof_area_m2"),
-        "lidar_coverage": result["lidar"].get("lidar_coverage"),
+        "roof_area_m2": lidar.get("roof_area_m2"),
+        "lidar_coverage": lidar.get("lidar_coverage"),
         "usable": usable,
         "bbox": [min(p[0] for p in points), min(p[1] for p in points),
                  max(p[0] for p in points), max(p[1] for p in points)] if points else None,
@@ -126,8 +131,8 @@ def export(result, usable_fc, web_dir=WEB_DIR, energy=None, extra=None):
     index["roofs"] = [r for r in index["roofs"] if r["refcat"] != reading["refcat"]]
     e = reading["energy"] or {}
     index["roofs"].append({"refcat": reading["refcat"], "address": reading["address"], "bbox": reading["bbox"],
-                           "usable_area_m2": reading["roof"]["usable_area_m2"],
-                           "confidence": reading["roof"]["confidence"],
+                           "usable_area_m2": reading["roof"].get("usable_area_m2"),
+                           "confidence": reading["roof"].get("confidence"),
                            "yearly_kwh": e.get("yearly_kwh"), "panels": e.get("panels"), "kwp": e.get("kwp"),
                            "block": reading.get("block"), "block_name": reading.get("block_name")})
     index["roofs"].sort(key=lambda r: r["refcat"])
@@ -149,13 +154,28 @@ def _hourly(path):
     return [r["time_utc"] for r in rows], [float(r["kwh"]) for r in rows]
 
 
+EMPTY_FC = {"type": "FeatureCollection", "features": []}
+
+
+def _usable_fc(result, name):
+    """The usable-area GeoJSON step 4 used: the file it names, else <name>_usable.geojson, else none."""
+    for path in (result.get("usable_file"), f"{name}_usable.geojson"):
+        if path and Path(path).exists():
+            return _load(path)
+        if path and (Path(name).parent / Path(path).name).exists():   # run from another folder
+            return _load(Path(name).parent / Path(path).name)
+    return EMPTY_FC
+
+
 def export_files(name, web_dir=WEB_DIR, extra=None):
     """Send a roof you already ran (the --out name you gave step 2 or step 4) to the map."""
     yield_path, panels_path = Path(f"{name}_yield.json"), Path(f"{name}_panels.geojson")
     energy = None
-    if yield_path.exists():                 # step 4 ran: it also saved the step 2 numbers it used
+    if yield_path.exists():                 # step 4 ran (newer versions also saved step 2's numbers)
         result = _load(yield_path)
-        usable_fc = _load(result.get("usable_file") or f"{name}_usable.geojson")
+        if "roof" not in result:            # saved by an older step 4: keep what it has
+            result["roof"] = {"method": "lidar only", "usable_area_m2": result.get("usable_area_m2"), "confidence": None}
+        usable_fc = _usable_fc(result, name)
         if panels_path.exists():
             feats = _load(panels_path)["features"]
             times, hourly = _hourly(Path(f"{name}_hourly.csv"))
@@ -170,13 +190,54 @@ def export_files(name, web_dir=WEB_DIR, extra=None):
     return export(result, usable_fc, web_dir, energy, extra)
 
 
+ROOF_TEST_SET = Path("data") / "roof_test_set" / "roof_test_set.csv"
+
+
+def blocks_by_refcat(roofs_csv):
+    """{refcat: {"block": 5, "block_name": "..."}} from the roof test set, if it exists."""
+    if not roofs_csv or not Path(roofs_csv).exists():
+        return {}
+    import csv
+    with open(roofs_csv, newline="", encoding="utf-8-sig") as f:
+        out = {}
+        for r in csv.DictReader(f):
+            block = str(r.get("block") or "").strip()
+            out[(r.get("refcat") or "").strip()[:14].upper()] = {
+                "block": int(block) if block.isdigit() else block or None, "block_name": r.get("block_name") or None}
+        return out
+
+
+def export_folder(folder, web_dir=WEB_DIR, roofs_csv=ROOF_TEST_SET):
+    """Send every roof step 4 saved in `folder` (every <name>_yield.json) to the map.
+    Returns (files written, [(name, error), ...])."""
+    blocks = blocks_by_refcat(roofs_csv)
+    written, failed = [], []
+    for yield_path in sorted(Path(folder).glob("*_yield.json")):
+        name = str(yield_path)[: -len("_yield.json")]
+        try:
+            ref = (_load(yield_path).get("building", {}).get("refcat") or "")[:14].upper()
+            written.append(export_files(name, web_dir, blocks.get(ref)))
+        except (Exception, SystemExit) as e:
+            failed.append((Path(name).name, str(e)[:160]))
+    return written, failed
+
+
 def main():
     ap = argparse.ArgumentParser(description="Send pipeline results to the Roofscapes RePowered map")
-    ap.add_argument("names", nargs="+", help="the --out names you gave step 2 or step 4, e.g. lluria56")
+    ap.add_argument("names", nargs="*", help="the --out names you gave step 2 or step 4, e.g. lluria56")
+    ap.add_argument("--all", metavar="FOLDER", help="send every roof step 4 saved in this folder, e.g. data\\yield_all")
+    ap.add_argument("--roofs", default=str(ROOF_TEST_SET), help="roof test set, for the block numbers (with --all)")
     ap.add_argument("--web", default=str(WEB_DIR), help="the website folder (default: ../website)")
     args = ap.parse_args()
+    if not args.names and not args.all:
+        ap.error("give the names of roofs you ran, or --all with a folder")
     for name in args.names:
         print("wrote", export_files(name, args.web))
+    if args.all:
+        written, failed = export_folder(args.all, args.web, args.roofs)
+        print(f"sent {len(written)} roofs from {args.all} to the map ({Path(args.web) / ROOFS})")
+        for name, err in failed:
+            print(f"  not sent: {name}: {err}")
 
 
 if __name__ == "__main__":

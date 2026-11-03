@@ -46,3 +46,24 @@ Groups start from the building with the most surplus and keep adding the neighbo
 - `groups.csv`: each group, who started it, its members, solar kWh, kWh used in the buildings that made it, kWh shared with neighbours, kWh to the grid, and how much of the group's use solar covers.
 - `buildings.csv`: each building's predicted use, solar, self-consumed, received, and % covered.
 - The printout ends with the totals for the whole area, with and without sharing.
+
+## 5c. Co-investment communities (`step5/communities.py`)
+
+This is the version the team chose on 3 Nov 2026: panels go only on the roofs that produce the most per panel, and neighbours co-invest in them for a fixed share of the output.
+
+```
+python -m step5.communities --yield-dir data\yield_all_v2 --out data\communities
+```
+
+It takes a few seconds. It reuses `data\sharing\buildings_demand_cache.json` from the earlier step 5 run, so it does not ask Catastro again.
+
+1. **Hosts:** the 10 roofs with the highest kWh per kWp, with at least 5 kWp (`--hosts`, `--min-kwp`).
+2. **Members:** first 40% of the host building's own flats (`--participation`), then neighbours ring by ring outwards (150 m rings). In each ring, offices and schools come first, because they use power in sunny hours while homes peak in the morning and evening. Offices and schools take at most 20% each and 40% together, so most shares go to flats. Members are added until their use in sunny hours matches the roof's output.
+3. **Shares:** every member gets a fixed share (beta) for the whole year and pays the same share of the cost.
+4. **Legal rules (see the legal check doc):** members within 500 m of the host minus a 50 m margin (`--max-distance 5000` for the 5 km rule); each building in one community only; flags for permits over 15 kW, no bill credit over 100 kW, and the host owners' approval. The IBI bonus is counted only for flats in the host building.
+
+Building types come from Catastro's main use: `4_1_office` = office (8:00-18:00 weekdays), `4_3_publicServices` = school-like hours (8:00-17:00 weekdays, closed July, August and Christmas). To mark a school or office by hand, add it to `data\building_types.csv` (`refcat,type`).
+
+Outputs in `data\communities`: `communities.csv` (one row per community), `members.csv` (one row per member building: role, type, distance, flats joining, beta, investment, kWh, savings, payback with and without incentives), `communities.png` (the map), `communities.geojson` (for QGIS or the 3D map).
+
+All prices are ASSUMPTIONS at the top of the file: 1,400 EUR per kWp, 0.16 EUR per kWh used, 0.05 EUR per surplus kWh, IBI 300 EUR per flat a year. The "used on the spot" figure is optimistic because predicted use is a smooth average day, not real meter data.

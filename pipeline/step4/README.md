@@ -62,7 +62,7 @@ python -m step4.batch roofs.csv --laz-dir data\lidar --out data\yield
 
 For the whole test set: `python -m step4.batch data\roof_test_set\roof_test_set.csv --laz-dir data\lidar --out data\yield`. Rows with `lat` and `lon` are found from that point, so Catastro's address spelling doesn't matter. A hand-made `roofs.csv` with just `address,block` still works. `data\yield\ranking.csv` lists every roof from most to least yearly kWh. A roof that fails is listed with its error.
 
-Add `--web` to send every roof to the 3D map as well. `--block 5` runs only block 5.
+Add `--web` to send every roof to the 3D map as well. `--block 5` runs only block 5. Already ran it without `--web`? `python -m web.export --all data\yield_all` sends the results you have, without running the LiDAR again.
 
 ## How the calculation works
 

@@ -101,3 +101,40 @@ def test_block_and_typical_day_reach_the_roof_file(tmp_path):
     assert r["block"] == 5 and "block_name" not in r and r["energy"]["typical_day_kwh"][0][13] == 1.5
     index = json.loads((tmp_path / "data" / "roofs" / "index.json").read_text())
     assert index["roofs"][0]["block"] == 5
+
+
+def _old_step4_files(folder, name, refcat, n=3):
+    """Files written by step 4 before --web existed: no step 2 numbers, no usable-area file."""
+    summary, rings, kwh, loss = _energy(n)
+    (folder / f"{name}_yield.json").write_text(json.dumps(
+        {"building": {"refcat": refcat, "address": "CL BRUC 59", "query": "x"}, "yield": summary,
+         "usable_area_m2": 206.0, "panels": []}))
+    feats = [{"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [r]},
+              "properties": {"kwh_year": k, "shade_loss": s}} for r, k, s in zip(rings, kwh, loss)]
+    (folder / f"{name}_panels.geojson").write_text(json.dumps({"type": "FeatureCollection", "features": feats}))
+    (folder / f"{name}_hourly.csv").write_text("time_utc,kwh\n2023-06-15T11:30,9.5\n")
+
+
+def test_older_step4_results_still_reach_the_map(tmp_path):
+    _old_step4_files(tmp_path, "bruc59", "0629613DF3802H")
+    r = json.loads(export_files(str(tmp_path / "bruc59"), tmp_path / "site").read_text())
+    assert len(r["energy"]["panel_list"]) == 3 and r["usable"] == [] and r["bbox"] is not None
+    assert r["roof"]["usable_area_m2"] == 206.0 and r["roof"]["confidence"] is None
+    assert r["energy"]["typical_day_kwh"][5][13] == 9.5
+
+
+def test_export_a_whole_folder_with_block_numbers(tmp_path):
+    from web.export import export_folder
+    runs = tmp_path / "yield_all"
+    runs.mkdir()
+    _old_step4_files(runs, "0629613df3802h", "0629613DF3802H")
+    _old_step4_files(runs, "0629617df3802h", "0629617DF3802H", n=2)
+    (runs / "broken_yield.json").write_text("{not json")
+    roofs = tmp_path / "roof_test_set.csv"
+    roofs.write_text("address,block,block_name,refcat,lat,lon\nCL BRUC 59,6,Llúria-Bruc,0629613DF3802H,41.39,2.17\n")
+    written, failed = export_folder(runs, tmp_path / "site", roofs)
+    assert len(written) == 2 and [n for n, _ in failed] == ["broken"]
+    index = json.loads((tmp_path / "site" / "data" / "roofs" / "index.json").read_text())
+    by_ref = {r["refcat"]: r for r in index["roofs"]}
+    assert by_ref["0629613DF3802H"]["block"] == 6 and by_ref["0629617DF3802H"]["block"] is None
+    assert by_ref["0629617DF3802H"]["panels"] == 2

@@ -608,13 +608,16 @@ require([
     if (isPipeline()) {
       const e = rd.energy;
       const ai = rd.roof.method === "lidar + ai" ? " and the AI model on the photo" : "";
-      return `Calculated by our pipeline. Step 2 read the roof from LiDAR${ai} (confidence ${rd.roof.confidence}): ` +
-        `${fmt(rd.roof.usable_area_m2)} m² usable. Step 3 placed panels tilted ${fmt(e.tilt_deg)}° facing ${compass(e.azimuth_deg)}. ` +
+      const conf = rd.roof.confidence ? ` (confidence ${rd.roof.confidence})` : "";
+      const outline = rd.usable && rd.usable.length ? " (yellow outline)" : "";
+      return `Panels placed by our pipeline from Breno's LiDAR analysis. Step 2 read the roof from LiDAR${ai}${conf}: ` +
+        `${rd.roof.usable_area_m2 != null ? `${fmt(rd.roof.usable_area_m2)} m² usable${outline}` : "the usable area"}. ` +
+        `Step 3 placed panels tilted ${fmt(e.tilt_deg)}° facing ${compass(e.azimuth_deg)}. ` +
         `Step 4 worked out every hour of a typical year, with shade from the LiDAR surface (neighbours, trees, rooftop structures)` +
         (e.panels_left_out ? ` and left out ${fmt(e.panels_left_out)} panels with too much shade.` : ".") + roofNotes(rd.roof);
     }
     if (rd) {
-      return `Roof read by step 2 (${rd.roof.method}, confidence ${rd.roof.confidence}): ${fmt(rd.roof.usable_area_m2)} m² usable, ` +
+      return `Roof read by step 2 (${rd.roof.method}${rd.roof.confidence ? `, confidence ${rd.roof.confidence}` : ""}): ${fmt(rd.roof.usable_area_m2)} m² usable, ` +
         `${fmt(rd.roof.obstacle_area_m2)} m² of stairs, tanks and other obstacles. Panels sit only on the usable area (yellow outline). ` +
         `The energy is the browser's quick estimate: run step 4 with --web for the exact numbers.` + roofNotes(rd.roof);
     }
@@ -975,8 +978,10 @@ require([
       ? `${RATING_NAMES[it.cls]} · number ${fmt(it.rank)} of ${fmt(rating.rated.length)}`
       : "Not rated: too small, or outside the 9 blocks";
     $("a-pick-m2").textContent = it.kwhPerM2 != null ? `${fmt(it.kwhPerM2)} kWh` : "–";
-    $("a-pick-year").textContent = it.kwhYear != null ? `${fmt(it.kwhYear)} kWh` : "–";
-    $("a-pick-panels").textContent = it.panels != null ? fmt(it.panels) : "–";
+    // a pipeline roof: the whole plot's numbers (as in its Roof Report), even when the plot has several building parts
+    const year = it.exact ? it.roof.yearly_kwh : it.kwhYear, panels = it.exact ? it.roof.panels : it.panels;
+    $("a-pick-year").textContent = year != null ? `${fmt(year)} kWh` : "–";
+    $("a-pick-panels").textContent = panels != null ? fmt(panels) : "–";
     $("a-pick-src").textContent = it.exact ? "Our pipeline" : it.kwhPerM2 != null ? "Quick estimate" : "–";
     $("a-pick-floor").textContent = `${fmt(b.relHeight, 1)} m high · about ${b.floors} floors · roof ${fmt(b.footprint)} m²`;
   }

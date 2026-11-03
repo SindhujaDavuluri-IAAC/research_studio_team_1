@@ -1,6 +1,57 @@
 {
  "roofs": [
   {
+   "refcat": "0530602DF3803B",
+   "address": "CL ARAGO 308 BARCELONA (BARCELONA)",
+   "bbox": [
+    2.1681613,
+    41.3940166,
+    2.1689481,
+    41.394586
+   ],
+   "usable_area_m2": 1342.8,
+   "confidence": "medium",
+   "yearly_kwh": null,
+   "panels": null,
+   "kwp": null,
+   "block": null,
+   "block_name": null
+  },
+  {
+   "refcat": "0629613DF3802H",
+   "address": "CL BRUC 59 BARCELONA (BARCELONA)",
+   "bbox": [
+    2.1702399,
+    41.3933492,
+    2.1704986,
+    41.3935442
+   ],
+   "usable_area_m2": 206.0,
+   "confidence": null,
+   "yearly_kwh": 19463,
+   "panels": 37,
+   "kwp": 15.54,
+   "block": null,
+   "block_name": null
+  },
+  {
+   "refcat": "0629617DF3802H",
+   "address": "CL DIPUTACIO 311 BARCELONA (BARCELONA)",
+   "bbox": [
+    2.1702177,
+    41.3929781,
+    2.1703502,
+    41.3930897
+   ],
+   "usable_area_m2": 226.5,
+   "confidence": null,
+   "yearly_kwh": 3425,
+   "panels": 8,
+   "kwp": 3.36,
+   "block": null,
+   "block_name": null
+  },
+  {
    "refcat": "0629625DF3802H",
    "address": "CL ROGER DE LLURIA 56 BARCELONA (BARCELONA)",
    "bbox": [

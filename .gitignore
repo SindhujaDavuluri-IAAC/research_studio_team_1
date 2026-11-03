@@ -25,11 +25,7 @@ pipeline/*.csv
 .DS_Store
 Thumbs.db
 
-data/
-.venv/
-*.laz
-*.las
-__pycache__/
-.pytest_cache/
-models/
-lluria56_*
+# A data folder at the top of the repo, and outputs left in pipeline/.
+# Never just "data/": that would also hide website/data, the files the map reads.
+/data/
+/pipeline/lluria56_*

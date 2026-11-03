@@ -60,6 +60,14 @@ python -m step4.shade_yield "Carrer de Roger de Llúria 56, Barcelona" --laz-dir
 
 `--web` alone sends the result to `../website`. To send a roof you ran earlier: `python -m web.export lluria56`.
 
+**Already ran step 4 without `--web`?** No need to run the LiDAR again. Send the whole results folder to the map in one go (block numbers come from the roof test set), then commit `website/data/roofs/`:
+
+```
+python -m web.export --all data\yield_all
+```
+
+This also works for results saved before `--web` existed: the map gets their panels, kWh and shade (the yellow usable-area outline only if the folder has the `_usable.geojson` files).
+
 ## Where outputs go
 
 Commands write their outputs into this folder (for example `lluria56.json`, `lluria56_preview.png`). Git ignores them, so they don't fill the repository. Put the ones worth sharing in `examples/`. `data/` (LiDAR, chips, weather, yields) and `models/` are also ignored, except `data/roof_exclusions.csv`: each person keeps their own copy.
