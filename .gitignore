@@ -24,3 +24,12 @@ pipeline/*.csv
 .vscode/
 .DS_Store
 Thumbs.db
+
+data/
+.venv/
+*.laz
+*.las
+__pycache__/
+.pytest_cache/
+models/
+lluria56_*

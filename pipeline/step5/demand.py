@@ -41,6 +41,30 @@ SHOP_CLOSED_SHARE = 0.2
 # Month factors Jan..Dec: winter lighting/heating, summer air conditioning.
 MONTH = np.array([1.15, 1.1, 1.0, 0.9, 0.85, 0.95, 1.1, 1.05, 0.95, 0.9, 1.0, 1.15])
 WEEKEND_HOME = 1.1   # people at home more
+# ASSUMPTION: offices use 120 kWh per m2 a year, open 8:00-18:00 Monday-Friday,
+# August at 60%. Schools (Catastro "public services") 60 kWh per m2, open 8:00-17:00
+# Monday-Friday, closed in July and August and over Christmas.
+OFFICE_KWH_PER_M2 = 120.0
+SCHOOL_KWH_PER_M2 = 60.0
+OFFICE_OPEN = (8, 18)
+SCHOOL_OPEN = (8, 17)
+OFFICE_CLOSED_SHARE = 0.15
+SCHOOL_CLOSED_SHARE = 0.1
+KIND_PER_M2 = {"shop": COMMERCIAL_KWH_PER_M2, "office": OFFICE_KWH_PER_M2, "school": SCHOOL_KWH_PER_M2}
+
+
+def kind_from_use(current_use, override=None):
+    """Which day pattern the non-home part of a building follows: shop, office or school.
+    Catastro's main use: 4_1_office -> office, 4_3_publicServices -> school (schools, health
+    centres... all daytime), anything else -> shop. An override (data/building_types.csv) wins."""
+    if override:
+        return override.strip().lower()
+    use = (current_use or "").lower()
+    if "office" in use:
+        return "office"
+    if "public" in use:
+        return "school"
+    return "shop"
 
 
 @dataclass
@@ -52,15 +76,20 @@ class Building:
     current_use: str
     year_built: int | None
     home_kwh: float
-    shop_kwh: float
+    shop_kwh: float          # the non-home part: shops, offices or a school (see kind)
+    kind: str = "shop"
 
     @property
     def yearly_kwh(self):
         return self.home_kwh + self.shop_kwh
 
 
-def predict_yearly(refcat, dwellings, floors, footprint_m2, current_use, year_built=None):
-    """Yearly kWh for homes and for shops/offices in one building."""
+def predict_yearly(refcat, dwellings, floors, footprint_m2, current_use, year_built=None, kind=None):
+    """Yearly kWh for homes and for shops/offices/schools in one building."""
+    kind = kind_from_use(current_use, kind)
+    if kind == "home":
+        kind = "shop"
+    per_m2 = KIND_PER_M2.get(kind, COMMERCIAL_KWH_PER_M2)
     dwellings = dwellings or 0
     floors = max(int(floors or 1), 1)
     use = (current_use or "").lower()
@@ -75,7 +104,7 @@ def predict_yearly(refcat, dwellings, floors, footprint_m2, current_use, year_bu
         home_kwh = dwellings * (FLAT_BASE_KWH + FLAT_KWH_PER_M2 * flat_m2)
         shop_m2 = footprint_m2 * shop_floors
     return Building(refcat, dwellings, floors, round(footprint_m2, 1), current_use or "", year_built,
-                    round(home_kwh), round(shop_m2 * COMMERCIAL_KWH_PER_M2))
+                    round(home_kwh), round(shop_m2 * per_m2), kind)
 
 
 def local_hours(times_utc):
@@ -130,7 +159,23 @@ def hourly_shapes(times_utc, profile_path=PROFILE_PATH):
     return home / home.sum(), shop / shop.sum()
 
 
+def profile_shapes(times_utc, profile_path=PROFILE_PATH):
+    """8760-hour shapes that each sum to 1, for home, shop, office and school."""
+    home, shop = hourly_shapes(times_utc, profile_path)
+    hour, weekday, month = local_hours(times_utc)
+    t = np.asarray(times_utc, dtype="datetime64[D]")
+    day_of_month = (t - t.astype("datetime64[M]")).astype(int) + 1
+    workday = weekday < 5
+    office = np.where(workday & (hour >= OFFICE_OPEN[0]) & (hour < OFFICE_OPEN[1]), 1.0, OFFICE_CLOSED_SHARE)
+    office = office * np.where(month == 8, 0.6, 1.0)
+    holidays = (month == 7) | (month == 8) | ((month == 12) & (day_of_month >= 23)) | ((month == 1) & (day_of_month <= 7))
+    school = np.where(workday & ~holidays & (hour >= SCHOOL_OPEN[0]) & (hour < SCHOOL_OPEN[1]), 1.0, SCHOOL_CLOSED_SHARE)
+    return {"home": home, "shop": shop, "office": office / office.sum(), "school": school / school.sum()}
+
+
 def hourly_demand(building, shapes):
+    if isinstance(shapes, dict):
+        return building.home_kwh * shapes["home"] + building.shop_kwh * shapes.get(building.kind, shapes["shop"])
     home, shop = shapes
     return building.home_kwh * home + building.shop_kwh * shop
 
