@@ -1,0 +1,305 @@
+ROOFSCAPES REPOWERED - DATA SOURCES AND PRECEDENTS
+==================================================
+
+Project:      Roofscapes RePowered
+Programme:    IAAC MaAI, Research Studio "Operable Futures", team 1
+Year:         2026
+Contributors: Breno Sader, Sindhuja (surname not in the repo), Daria Basha
+Repository:   https://github.com/iaac-maai/research_studio_team_1
+List checked: 4 November 2026
+
+HOW TO READ THE STATUS LINE
+  CONFIRMED    Name, year, contributors and link were checked online.
+  PARTLY       Some details are confirmed. The note says what is still open.
+  UNCONFIRMED  Taken from the project files only, or not found online.
+
+"Service address" means the link is copied from the project code. It was not
+opened during this check. Live datasets have no single publication year, so
+their year says "Live service, used 2026".
+
+Everything that still needs a manual search is listed in section 6.
+
+
+1. DATA SOURCES USED BY THE TOOL
+--------------------------------
+
+D1. Catastro: building and plot data (coordinates, INSPIRE Buildings, Cadastral Parcels)
+    Year:         Live service, used 2026
+    Contributors: Dirección General del Catastro, Spain
+    Used for:     Plot reference, footprint, year built, use, dwellings, floors
+    Link:         https://ovc.catastro.meh.es/INSPIRE/wfsBU.aspx (service address)
+                  https://ovc.catastro.meh.es/INSPIRE/wfsCP.aspx (service address)
+    Status:       PARTLY. The official documentation page and licence were not read.
+
+D2. Territorial LiDAR, 3rd coverage
+    Year:         2021-2023 (flights)
+    Contributors: Institut Cartogràfic i Geològic de Catalunya (ICGC)
+    Used for:     Roof reading, building height, shade from anything within 150 m
+    Link:         https://www.icgc.cat/en/Geoinformation-and-Maps/Data-and-products/Elevations/Territorial-elevations/Territorial-LiDAR
+    Status:       PARTLY. Coverage and years are confirmed. The licence was not read,
+                  because the product page failed to load during this check.
+
+D3. Territorial Orthophoto (WMS)
+    Year:         Annual series. The year of the images used is not recorded.
+    Contributors: Institut Cartogràfic i Geològic de Catalunya (ICGC)
+    Used for:     Roof photos for the step 2 AI model
+    Link:         https://www.icgc.cat/en/Geoinformation-and-Maps/Online-services-Geoservices/WMS-Orthoimages/WMS-Territorial-Orthophoto
+    Status:       PARTLY. CC BY 4.0 comes from the project code and secondary sources,
+                  not from ICGC's own licence page.
+
+D4. ICGC geocoder
+    Year:         Live service, used 2026
+    Contributors: Institut Cartogràfic i Geològic de Catalunya (ICGC)
+    Used for:     Address to coordinates (first choice)
+    Link:         https://eines.icgc.cat/geocodificador/cerca (service address)
+    Status:       UNCONFIRMED. Documentation and licence were not read.
+
+D5. Nominatim / OpenStreetMap
+    Year:         Live service, used 2026
+    Contributors: OpenStreetMap contributors
+    Used for:     Address to coordinates (fallback), background map (fallback)
+    Link:         https://nominatim.openstreetmap.org/search (service address)
+    Status:       UNCONFIRMED. Documentation and licence were not read.
+
+D6. PVGIS typical meteorological year and monthly radiation
+    Year:         PVGIS 5.3, released 2024 (the code falls back to 5.2)
+    Contributors: European Commission, Joint Research Centre (JRC)
+    Used for:     Hourly sun and temperature for step 4 (the default weather)
+    Link:         https://joint-research-centre.ec.europa.eu/photovoltaic-geographical-information-system-pvgis_en
+    Status:       CONFIRMED
+
+D7. TMYx weather file, Barcelona CT 081800 (optional alternative to PVGIS)
+    Year:         2026 website citation. File period of record: 1973-2023 (from the file header)
+    Contributors: Linda K. Lawrie, Drury B. Crawley (Climate.OneBuilding)
+    Used for:     Comparing the weather year with PVGIS; optional step 4 runs
+    Link:         https://climate.onebuilding.org
+    Status:       PARTLY. The homepage citation is confirmed. The direct link to this
+                  file was not found, and the homepage states no data licence.
+
+D8. EPW Map (how the TMYx file was found)
+    Year:         Not stated on the page read
+    Contributors: LadybugTools team, as part of Pollination
+    Used for:     Finding the EPW weather file
+    Link:         http://ladybug-tools.github.io/epwmap/
+    Status:       PARTLY. Contributors and link are confirmed. The year is open.
+
+D9. Electricity consumption by postal code, economic sector and time band
+    Year:         Updated monthly; yearly files go back to at least 2019
+    Contributors: Ajuntament de Barcelona (Open Data BCN), from Datadis meter data
+    Used for:     How homes and services use power across the day, month and week
+    Link:         https://opendata-ajuntament.barcelona.cat/data/dataset/consum-electricitat-bcn
+    Status:       CONFIRMED (CC BY 4.0)
+
+D10. Barcelona 3D city model, building layer and background map
+    Year:         Not recorded
+    Contributors: Ajuntament de Barcelona
+    Used for:     The website's 3D map, footprints, height, roof form, use
+    Link:         https://geo.bcn.cat/agisserver/rest/services/Hosted/BCN_3DtoFeat/SceneServer (service address)
+                  https://geo.bcn.cat/agisserver/rest/services/Hosted/BCN_3DtoFeat/FeatureServer/22 (service address)
+    Status:       UNCONFIRMED. Year and licence were not found.
+
+D11. L'Observatori de l'Energia (energy balance report)
+    Year:         Not recorded. Which report and year the website used is unknown.
+    Contributors: Agència d'Energia de Barcelona
+    Used for:     Website text: "6,199 GWh a year, about 93% of what it uses. Only 1.2% of it is renewable."
+    Link:         https://www.energia.barcelona/ca/lenergia-de-barcelona/lobservatori-de-lenergia
+    Status:       PARTLY. The organisation and link are confirmed. These three figures
+                  were not traced to a report.
+
+D12. PNOA LiDAR (alternative to D2)
+    Year:         Programme began 2008. The coverage used, if any, is not recorded.
+    Contributors: Instituto Geográfico Nacional / Centro Nacional de Información Geográfica (CNIG)
+    Used for:     Named in the code as an optional LiDAR source
+    Link:         https://centrodedescargas.cnig.es (address not verified)
+    Status:       UNCONFIRMED. The download link was not verified, and it is not known
+                  whether the team actually used this data.
+
+D13. ArcGIS Maps SDK for JavaScript 4.31 (software, not data)
+    Year:         Not checked
+    Contributors: Esri
+    Used for:     The website's 3D engine
+    Link:         https://js.arcgis.com/4.31/ (service address)
+    Status:       UNCONFIRMED. Release year and licence terms were not read.
+
+
+2. PRECEDENTS
+-------------
+
+P1. Vertical Extension and Improving of Existing Buildings
+    Year:         2017
+    Contributors: Joan Artés, Gerardo Wadel, Núria Martí
+    Published in: The Open Construction and Building Technology Journal, vol. 11
+    Used for:     Barcelona rooftop extension cases. Its four buildings are the tool's
+                  first test addresses (pipeline/smoke_test.py).
+    Link:         https://doi.org/10.2174/1874836801711010083
+    Status:       CONFIRMED. See the address mismatch in section 6.
+
+P2. Barcelona energy map (Mapa d'Energia): the city's own roof-by-roof solar potential
+    Year:         About 2015 (from the project code)
+    Contributors: Ajuntament de Barcelona. Possibly built by Tecnogeo (see Status).
+    Used for:     Benchmark: the city's kWh, kW and usable area next to ours, roof by roof
+    Link:         https://coneixement-eu.bcn.cat/mapaEnergia/
+                  https://www.construible.es/2015/05/19/visor-energetico-que-identifica-recursos-renovables-para-edificios
+                  https://opendata-ajuntament.barcelona.cat/data/en/dataset/mapa-energia-teleco-wms
+    Status:       PARTLY. The viewer returned an error (403) during this check, so its
+                  credits and date were not read. A 2015 article says Tecnogeo built a
+                  matching solar tool for the Ajuntament, but it never names the Mapa
+                  d'Energia, so they may not be the same tool.
+
+
+3. METHOD REFERENCES
+--------------------
+
+M1. Automatic Segmentation of Raw LIDAR Data for Extraction of Building Roofs
+    Year:         2014
+    Contributors: Mohammad Awrangjeb, Clive S. Fraser
+    Published in: Remote Sensing 6(5), 3716-3751
+    Used for:     The plane-growing idea and the 0.15 m tolerance in the step 2 roof reading
+    Link:         https://doi.org/10.3390/rs6053716
+    Status:       CONFIRMED
+
+M2. U-Net: Convolutional Networks for Biomedical Image Segmentation
+    Year:         2015
+    Contributors: Olaf Ronneberger, Philipp Fischer, Thomas Brox
+    Used for:     The architecture of the step 2 AI model
+    Link:         https://arxiv.org/abs/1505.04597
+    Status:       CONFIRMED
+
+M3. Deep Residual Learning for Image Recognition (ResNet)
+    Year:         2015 (arXiv)
+    Contributors: Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun
+    Used for:     The ResNet-34 encoder of the step 2 AI model
+    Link:         https://arxiv.org/abs/1512.03385
+    Status:       CONFIRMED
+
+M4. Segmentation Models Pytorch
+    Year:         2019
+    Contributors: Pavel Iakubovskii
+    Used for:     The library that builds and trains the step 2 AI model
+    Link:         https://github.com/qubvel-org/segmentation_models.pytorch
+    Status:       CONFIRMED
+
+M5. ImageNet: A Large-Scale Hierarchical Image Database
+    Year:         2009
+    Contributors: Jia Deng et al.
+    Used for:     Pretrained starting weights for the AI model's encoder
+    Link:         https://doi.org/10.1109/CVPR.2009.5206848
+    Status:       PARTLY. Check the full author list on the paper itself.
+
+
+4. LEGAL AND COST SOURCES
+-------------------------
+
+L1. Real Decreto 244/2019 (self-consumption rules)
+    Year:         2019
+    Contributors: Government of Spain (BOE-A-2019-5089)
+    Used for:     Shared self-consumption, 500 m distance rule, 100 kW and 15 kW limits
+    Link:         https://www.boe.es/buscar/pdf/2019/BOE-A-2019-5089-consolidado.pdf
+    Status:       PARTLY. The decree is confirmed. The article numbers quoted in the code
+                  (3.g, 4.2.a, 7.1.b.ii) were not checked against the current text.
+
+L2. Real Decreto-ley 7/2026 (final provision 14 amends RD 244/2019)
+    Year:         2026 (20 March; in force 22 March according to an industry website)
+    Contributors: Government of Spain
+    Used for:     The 5,000 m option for solar up to 5 MW
+    Link:         https://www.iberley.es/legislacion/disposicion-final-14-real-decreto-ley-7-2026-20-marzo-plan-integral-respuesta-crisis-oriente-medio
+    Status:       PARTLY. The decree is confirmed. The 5,000 m and 5 MW details come from
+                  industry websites, not from the BOE. Find the BOE text.
+
+L3. Barcelona tax ordinances: ICIO 95% bonus (2026, art. 7.4), IBI 50% for 3 years (2025, art. 9.6)
+    Year:         2025 and 2026
+    Contributors: Ajuntament de Barcelona
+    Used for:     Community costs and payback in step 5
+    Link:         https://ajuntament.barcelona.cat/premsa/2026/01/30/aprovades-definitivament-les-ordenances-fiscals-de-2026/
+    Status:       UNCONFIRMED. The ordinance text was not found. The city's announcement
+                  links the 95% ICIO bonus to urban regeneration, not solar. Commercial
+                  websites disagree on whether the IBI bonus lasts 3 or 5 years.
+
+L4. OCU 2026 solar installation prices (1,330-1,500 EUR per kWp, VAT included)
+    Year:         2026 (according to the project code)
+    Contributors: OCU (Organización de Consumidores y Usuarios)
+    Used for:     The 1,400 EUR per kWp cost in step 5
+    Link:         NOT FOUND
+    Status:       UNCONFIRMED. No OCU 2026 figure was found. Other 2026 websites suggest
+                  about 850-1,300 EUR per kWp without a battery, which is lower.
+
+L5. "Legal check for the rooftop solar tool"
+    Year:         2026 (3 November)
+    Contributors: Not recorded
+    Used for:     The legal rules in pipeline/step5/communities.py
+    Link:         NOT FOUND. The code cites this document, but it is not in the repository.
+    Status:       UNCONFIRMED
+
+
+5. NAMED IN THE PROJECT, NOT USED YET
+-------------------------------------
+
+F1. RID: Roof Information Dataset for Computer Vision-Based Photovoltaic Potential Assessment
+    Year:         2022
+    Contributors: Sebastian Krapf et al. (Technical University of Munich)
+    Possible use: Extra training data for the step 2 AI model
+    Link:         https://www.mdpi.com/2072-4292/14/10/2299
+    Status:       CONFIRMED
+
+F2. BDAPPV: A crowdsourced dataset of aerial images with annotated solar photovoltaic arrays
+    Year:         2023
+    Contributors: Gabriel Kasmi et al.
+    Possible use: Extra training data for spotting existing panels
+    Link:         https://zenodo.org/records/7358126
+    Status:       PARTLY. Check the full author list and year on the Scientific Data article.
+
+F3. Google Maps Platform Solar API
+    Year:         2023 (announced)
+    Contributors: Google
+    Possible use: Step 6 check of yield and shade
+    Link:         https://developers.google.com/maps/documentation/solar/overview
+    Status:       PARTLY. Barcelona coverage was not checked.
+
+F4. Ladybug Tools
+    Year:         Not checked
+    Contributors: LadybugTools team
+    Possible use: Step 6 check of shade loss
+    Link:         https://www.ladybug.tools/ladybug.html
+    Status:       PARTLY. Contributors and link are confirmed. The year is open.
+
+
+6. TO CHECK MANUALLY
+--------------------
+
+Highest priority: these affect numbers or claims the project shows.
+[ ] L3  ICIO and IBI: find the ordinance text. Does the 95% ICIO bonus apply to solar?
+        Is the IBI bonus 3 or 5 years? Are the article numbers right?
+[ ] L4  Cost: find the OCU 2026 source for 1,330-1,500 EUR per kWp, or replace the figure.
+[ ] L5  Legal check: find the document and add its author and link.
+[ ] L2  5 km rule: confirm 5,000 m, 5 MW and the start date in the BOE.
+[ ] L1  Check the quoted RD 244/2019 article numbers against the current text.
+[ ] D11 Find the report and year behind 6,199 GWh, 93% and 1.2%.
+[ ] P2  Open the Mapa d'Energia viewer in a browser. Note its credits and date, and
+        whether Tecnogeo built it.
+
+Details to complete
+[ ] Team: add Sindhuja's surname.
+[ ] P1  The paper says "Plaça del Doctor Letamendi, 29", but pipeline/smoke_test.py uses
+        "Carrer de Letamendi 29". Check that the test looks up the right building.
+[ ] D1  Catastro: official documentation link and licence.
+[ ] D2  ICGC LiDAR: licence.
+[ ] D3  ICGC orthophoto: licence on ICGC's own page, and the year of the images used.
+[ ] D4  ICGC geocoder: documentation link and licence.
+[ ] D5  Nominatim / OpenStreetMap: documentation link and licence.
+[ ] D7  TMYx: direct link to the Barcelona file, and its licence.
+[ ] D8  EPW Map: year.
+[ ] D10 Barcelona 3D model: year and licence.
+[ ] D12 PNOA LiDAR: verify the link, and ask the team whether this data was used.
+[ ] D13 ArcGIS SDK: release year and licence terms.
+[ ] M5  ImageNet: full author list.
+[ ] F2  BDAPPV: full author list and year.
+[ ] F3  Google Solar API: is Barcelona covered?
+[ ] F4  Ladybug Tools: year.
+
+Known gaps
+- Heritage: the project has not found Barcelona's heritage catalogue as open data.
+- Assumptions: values marked ASSUMPTION in website/config.js, pipeline/step5/demand.py and
+  pipeline/step5/communities.py have no source yet (for example flat electricity use,
+  electricity prices, IBI per flat and participation rate).
+- Precedents: this list only covers what the project files mention. Add any precedents the
+  team used in presentations or reports that are not in the repository.
