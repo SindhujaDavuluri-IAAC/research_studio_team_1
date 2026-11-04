@@ -1,0 +1,471 @@
+{
+ "source": "Step 5c's map (pipeline run 3 Nov 2026), read from communities.png",
+ "made": "2026-11-04",
+ "note": "Members come from the colours of step 5c's map (matched to the city's plot outlines), the group numbers from its table. Addresses, units and year built: Catastro (ovc.catastro.meh.es), 4 Nov 2026.",
+ "max_distance_m": 500,
+ "participation": 0.4,
+ "blocks": [
+  "03286",
+  "04276",
+  "05266",
+  "04296",
+  "05293",
+  "05285",
+  "06282",
+  "06276",
+  "05306",
+  "06296",
+  "07285"
+ ],
+ "totals": {
+  "kwp": 108.8,
+  "yearly_kwh": 144400,
+  "buildings": 50
+ },
+ "groups": [
+  {
+   "id": 1,
+   "host": "0328610DF3802G",
+   "host_address": "Pg. de Gràcia 54",
+   "kwp": 20.6,
+   "yearly_kwh": 28200,
+   "kwh_per_kwp": 1372,
+   "buildings": 6,
+   "flats_joining": 15,
+   "offices_schools_joining": 2,
+   "payback_years": 6.4,
+   "members": [
+    {
+     "refcat": "0328610DF3802G",
+     "role": "host",
+     "address": "Pg. de Gràcia 54",
+     "also": "Aragó 280",
+     "about": "34 offices · built 1980"
+    },
+    {
+     "refcat": "0328601DF3802G",
+     "role": "guest",
+     "address": "Aragó 284",
+     "about": "school, one owner · built 1958"
+    },
+    {
+     "refcat": "0328607DF3802G",
+     "role": "guest",
+     "address": "Pg. de Gràcia 48",
+     "about": "8 homes, 3 shops, 3 offices · built 1920"
+    },
+    {
+     "refcat": "0328608DF3802G",
+     "role": "guest",
+     "address": "Pg. de Gràcia 50",
+     "about": "13 offices, 5 homes, 2 shops · built 1900"
+    },
+    {
+     "refcat": "0328611DF3802G",
+     "role": "guest",
+     "address": "Aragó 282",
+     "about": "15 homes, 2 shops · built 1910"
+    },
+    {
+     "refcat": "0328612DF3802G",
+     "role": "guest",
+     "address": "Aragó 284",
+     "about": "21 homes, 3 offices · built 1950"
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "host": "0328609DF3802G",
+   "host_address": "Pg. de Gràcia 52",
+   "kwp": 7.6,
+   "yearly_kwh": 10300,
+   "kwh_per_kwp": 1365,
+   "buildings": 4,
+   "flats_joining": 6,
+   "offices_schools_joining": 2,
+   "payback_years": 6.4,
+   "members": [
+    {
+     "refcat": "0328609DF3802G",
+     "role": "host",
+     "address": "Pg. de Gràcia 52",
+     "about": "10 homes, 2 shops · built 1957"
+    },
+    {
+     "refcat": "0328602DF3802G",
+     "role": "guest",
+     "address": "Pau Claris 121",
+     "about": "school, one owner · built 1950"
+    },
+    {
+     "refcat": "0328606DF3802G",
+     "role": "guest",
+     "address": "Pg. de Gràcia 46",
+     "about": "7 offices, 7 homes, 4 bars and restaurants, 2 shops · built 1920"
+    },
+    {
+     "refcat": "0427605DF3802G",
+     "role": "guest",
+     "address": "Consell de Cent 322",
+     "about": "27 offices, 9 homes, 1 shop · built 1980"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "host": "0627614DF3802H",
+   "host_address": "Gran Via 631",
+   "kwp": 6.7,
+   "yearly_kwh": 8900,
+   "kwh_per_kwp": 1331,
+   "buildings": 4,
+   "flats_joining": 5,
+   "offices_schools_joining": 2,
+   "payback_years": 6.6,
+   "members": [
+    {
+     "refcat": "0627614DF3802H",
+     "role": "host",
+     "address": "Gran Via 631",
+     "about": "11 homes, 3 offices, 1 shop · built 1877"
+    },
+    {
+     "refcat": "0627603DF3802H",
+     "role": "guest",
+     "address": "Diputació 276",
+     "about": "6 offices, 3 homes · built 1970"
+    },
+    {
+     "refcat": "0627612DF3802H",
+     "role": "guest",
+     "address": "Roger de Llúria 27",
+     "about": "9 homes, 1 shop · built 1967"
+    },
+    {
+     "refcat": "0728507DF3802H",
+     "role": "guest",
+     "address": "Gran Via 639",
+     "about": "offices, one owner · built 1878"
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "host": "0526620DF3802F",
+   "host_address": "Pg. de Gràcia 30",
+   "kwp": 8.8,
+   "yearly_kwh": 11700,
+   "kwh_per_kwp": 1329,
+   "buildings": 3,
+   "flats_joining": 8,
+   "offices_schools_joining": 2,
+   "payback_years": 6.6,
+   "members": [
+    {
+     "refcat": "0526620DF3802F",
+     "role": "host",
+     "address": "Pg. de Gràcia 30",
+     "about": "21 homes, 4 shops · built 2013"
+    },
+    {
+     "refcat": "0427615DF3802G",
+     "role": "guest",
+     "address": "Diputació 275",
+     "about": "school, one owner · built 1970"
+    },
+    {
+     "refcat": "0526614DF3802F",
+     "role": "guest",
+     "address": "Pg. de Gràcia 20",
+     "about": "offices, one owner · built 2021"
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "host": "0628208DF3802H",
+   "host_address": "Diputació 291",
+   "kwp": 8.4,
+   "yearly_kwh": 11100,
+   "kwh_per_kwp": 1326,
+   "buildings": 7,
+   "flats_joining": 11,
+   "offices_schools_joining": 2,
+   "payback_years": 6.7,
+   "members": [
+    {
+     "refcat": "0628208DF3802H",
+     "role": "host",
+     "address": "Diputació 291",
+     "about": "17 homes, 2 shops · built 1900"
+    },
+    {
+     "refcat": "0628207DF3802H",
+     "role": "guest",
+     "address": "Diputació 293",
+     "about": "homes, one owner · built 1900"
+    },
+    {
+     "refcat": "0628209DF3802H",
+     "role": "guest",
+     "address": "Diputació 289",
+     "about": "homes, one owner · built 1900"
+    },
+    {
+     "refcat": "0628211DF3802H",
+     "role": "guest",
+     "address": "Pau Claris 112",
+     "about": "homes, one owner · built 1900"
+    },
+    {
+     "refcat": "0628215DF3802H",
+     "role": "guest",
+     "address": "Ptge. Permanyer 7",
+     "about": "health or care, one owner · built 1900"
+    },
+    {
+     "refcat": "0628216DF3802H",
+     "role": "guest",
+     "address": "Ptge. Permanyer 9",
+     "about": "homes, one owner · built 1900"
+    },
+    {
+     "refcat": "0628219DF3802H",
+     "role": "guest",
+     "address": "Ptge. Permanyer 15",
+     "about": "health or care, one owner · built 1900"
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "host": "0627611DF3802H",
+   "host_address": "Roger de Llúria 29",
+   "kwp": 11.8,
+   "yearly_kwh": 15600,
+   "kwh_per_kwp": 1325,
+   "buildings": 5,
+   "flats_joining": 9,
+   "offices_schools_joining": 2,
+   "payback_years": 6.7,
+   "members": [
+    {
+     "refcat": "0627611DF3802H",
+     "role": "host",
+     "address": "Roger de Llúria 29",
+     "about": "18 homes, 1 shop · built 1945"
+    },
+    {
+     "refcat": "0627609DF3802H",
+     "role": "guest",
+     "address": "Roger de Llúria 33",
+     "about": "8 homes, 1 shop · built 1900"
+    },
+    {
+     "refcat": "0627615DF3802H",
+     "role": "guest",
+     "address": "Gran Via 629",
+     "about": "homes, one owner · built 1970"
+    },
+    {
+     "refcat": "0627624DF3802H",
+     "role": "guest",
+     "address": "Diputació 284",
+     "about": "1 office, 1 shop · built 1960"
+    },
+    {
+     "refcat": "0628217DF3802H",
+     "role": "guest",
+     "address": "Ptge. Permanyer 11",
+     "about": "health or care, one owner · built 1900"
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "host": "0728509DF3802H",
+   "host_address": "Gran Via 635",
+   "kwp": 23.9,
+   "yearly_kwh": 31300,
+   "kwh_per_kwp": 1307,
+   "buildings": 9,
+   "flats_joining": 18,
+   "offices_schools_joining": 2,
+   "payback_years": 6.7,
+   "members": [
+    {
+     "refcat": "0728509DF3802H",
+     "role": "host",
+     "address": "Gran Via 635",
+     "about": "offices, one owner · built 2002"
+    },
+    {
+     "refcat": "0728503DF3802H",
+     "role": "guest",
+     "address": "Bruc 49",
+     "about": "homes, one owner · built 1900"
+    },
+    {
+     "refcat": "0728504DF3802H",
+     "role": "guest",
+     "address": "Bruc 47",
+     "about": "24 offices, 4 shops · built 1970"
+    },
+    {
+     "refcat": "0728505DF3802H",
+     "role": "guest",
+     "address": "Gran Via 643",
+     "about": "7 homes · built 1920"
+    },
+    {
+     "refcat": "0728511DF3802H",
+     "role": "guest",
+     "address": "Roger de Llúria 40",
+     "about": "homes, one owner · built 1890"
+    },
+    {
+     "refcat": "0728512DF3802H",
+     "role": "guest",
+     "address": "Roger de Llúria 42",
+     "about": "8 homes, 2 shops, 1 office · built 1890"
+    },
+    {
+     "refcat": "0728514DF3802H",
+     "role": "guest",
+     "address": "Roger de Llúria 46",
+     "about": "4 homes, 1 shop, 1 office · built 1890"
+    },
+    {
+     "refcat": "0728516DF3802H",
+     "role": "guest",
+     "address": "Diputació 290",
+     "about": "14 homes, 2 shops · built 1890"
+    },
+    {
+     "refcat": "0728518DF3802H",
+     "role": "guest",
+     "address": "Diputació 294",
+     "about": "5 offices, 5 homes, 2 shops · built 1900"
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "host": "0427602DF3802G",
+   "host_address": "Consell de Cent 314",
+   "kwp": 5.9,
+   "yearly_kwh": 7600,
+   "kwh_per_kwp": 1297,
+   "buildings": 4,
+   "flats_joining": 5,
+   "offices_schools_joining": 2,
+   "payback_years": 6.7,
+   "members": [
+    {
+     "refcat": "0427602DF3802G",
+     "role": "host",
+     "address": "Consell de Cent 314",
+     "about": "11 homes, 4 shops, 4 offices · built 2024"
+    },
+    {
+     "refcat": "0328603DF3802G",
+     "role": "guest",
+     "address": "Consell de Cent 357-359",
+     "about": "22 offices, 2 shops · built 1980"
+    },
+    {
+     "refcat": "0427603DF3802G",
+     "role": "guest",
+     "address": "Consell de Cent 318",
+     "about": "10 homes, 2 shops · built 1987"
+    },
+    {
+     "refcat": "0427614DF3802G",
+     "role": "guest",
+     "address": "Diputació 279",
+     "about": "56 offices, 2 homes, 1 cultural or school unit · built 1980"
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "host": "0728501DF3802H",
+   "host_address": "Bruc 55",
+   "kwp": 9.7,
+   "yearly_kwh": 12500,
+   "kwh_per_kwp": 1296,
+   "buildings": 5,
+   "flats_joining": 7,
+   "offices_schools_joining": 2,
+   "payback_years": 6.8,
+   "members": [
+    {
+     "refcat": "0728501DF3802H",
+     "role": "host",
+     "address": "Bruc 55",
+     "about": "homes, one owner · built 1900"
+    },
+    {
+     "refcat": "0629613DF3802H",
+     "role": "guest",
+     "address": "Bruc 59",
+     "about": "12 homes, 2 shops · built 1936"
+    },
+    {
+     "refcat": "0629615DF3802H",
+     "role": "guest",
+     "address": "Diputació 317",
+     "about": "homes, one owner · built 1900"
+    },
+    {
+     "refcat": "0629627DF3802H",
+     "role": "guest",
+     "address": "Roger de Llúria 52",
+     "about": "public services, one owner · built 1987"
+    },
+    {
+     "refcat": "0728513DF3802H",
+     "role": "guest",
+     "address": "Roger de Llúria 44",
+     "about": "32 offices, 1 shop · built 1978"
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "host": "0629624DF3802H",
+   "host_address": "Roger de Llúria 54",
+   "kwp": 5.5,
+   "yearly_kwh": 7100,
+   "kwh_per_kwp": 1292,
+   "buildings": 3,
+   "flats_joining": 7,
+   "offices_schools_joining": 2,
+   "payback_years": 6.8,
+   "members": [
+    {
+     "refcat": "0629624DF3802H",
+     "role": "host",
+     "address": "Roger de Llúria 54",
+     "about": "18 homes, 2 shops · built 1900"
+    },
+    {
+     "refcat": "0530601DF3803B",
+     "role": "guest",
+     "address": "Aragó 302",
+     "about": "school, one owner · built 1964"
+    },
+    {
+     "refcat": "0629621DF3802H",
+     "role": "guest",
+     "address": "Roger de Llúria 48",
+     "about": "offices, one owner · built 1976"
+    }
+   ]
+  }
+ ],
+ "assumed": {
+  "0629627DF3802H": "A lone dot on step 5c's map without a building under it; matched to the nearest plot (community 9)."
+ }
+}

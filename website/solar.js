@@ -1,10 +1,9 @@
 /* Roofscapes RePowered — solar engine (no map code here, so it can be tested on its own).
  *
  *  - sun position for Barcelona through the year
- *  - panel slots on a flat roof (with an edge setback)
- *  - shade from neighbouring buildings: a ray from each panel towards the sun
- *  - sky view (how much open sky a panel sees) for diffuse light
- *  - sharing the energy with buildings inside the 2 km circle
+ *  - shade from neighbouring buildings: a ray from a roof point towards the sun
+ *  - sky view (how much open sky a roof point sees) for diffuse light
+ *  - a quick rating of every roof (roofPotential), for roofs our pipeline has not run
  */
 (function (root) {
   "use strict";
@@ -224,86 +223,7 @@
     return sum / N;
   }
 
-  /* ---------- roof analysis ---------- */
-  function longestEdgeAngle(p) {
-    let best = 0, ang = 0;
-    for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
-      const dx = p[i][0] - p[j][0], dy = p[i][1] - p[j][1], L = Math.hypot(dx, dy);
-      if (L > best) { best = L; ang = Math.atan2(dy, dx); }
-    }
-    return ang;
-  }
-
-  // Inside one of the usable areas from step 2 (each area = [outer ring, ...holes]).
-  function insideUsable(x, y, usable) {
-    return usable.some(([outer, ...holes]) => pointInPolygon(x, y, outer) && !holes.some((h) => pointInPolygon(x, y, h)));
-  }
-
-  // Panel slots on the roof, aligned to its longest edge, kept `setback` metres from every edge.
-  // With `usable` (step 2 roof reading), a panel must lie fully on the usable area instead:
-  // step 2 has already kept it away from edges, courtyards, stairs, tanks and AC units.
-  // The usable area is irregular, so several grid shifts and both panel directions are tried
-  // and the layout with the most panels is kept.
-  function panelSlots(b, cfg, usable) {
-    const p = b.xy;
-    const th = longestEdgeAngle(p);
-    const c = Math.cos(th), s = Math.sin(th);
-    const toUV = ([x, y]) => [x * c + y * s, -x * s + y * c];
-    const toXY = (u, v) => [u * c - v * s, u * s + v * c];
-    const [u0, v0, u1, v1] = bbox(p.map(toUV));
-    const gap = cfg.PANEL_GAP_M;
-    const rings = [p, ...(b.holes || [])];
-    const onRoof = ([x, y]) =>
-      insideFootprint(x, y, b) && rings.every((r) => minEdgeDistance(x, y, r) >= cfg.ROOF_SETBACK_M - 1e-6);
-
-    function layout(L, W, du, dv, inset) {
-      const slots = [];
-      for (let u = u0 + inset + du; u + L <= u1 - inset + 1e-6; u += L + gap) {
-        for (let v = v0 + inset + dv; v + W <= v1 - inset + 1e-6; v += W + gap) {
-          const corners = [toXY(u, v), toXY(u + L, v), toXY(u + L, v + W), toXY(u, v + W)];
-          // usable: also test edge midpoints and centre, so a panel cannot straddle a small obstacle
-          const ok = usable
-            ? [0, 0.5, 1].every((a) => [0, 0.5, 1].every((q) => insideUsable(...toXY(u + a * L, v + q * W), usable)))
-            : corners.every(onRoof);
-          if (!ok) continue;
-          const [cx, cy] = toXY(u + L / 2, v + W / 2);
-          slots.push({ corners, cx, cy });
-        }
-      }
-      return slots;
-    }
-
-    const L = cfg.PANEL_LENGTH_M, W = cfg.PANEL_WIDTH_M;
-    if (!usable) return layout(L, W, 0, 0, cfg.ROOF_SETBACK_M);
-    let best = [];
-    for (const [l, w] of [[L, W], [W, L]])
-      for (let du = 0; du < l + gap; du += 0.25)
-        for (let dv = 0; dv < w + gap; dv += 0.25) {
-          const slots = layout(l, w, du, dv, 0);
-          if (slots.length > best.length) best = slots;
-        }
-    return best;
-  }
-
-  // Full analysis of one roof: slots, shade, sky view, yearly sun per slot.
-  // `usable`: optional step 2 usable areas in local x/y (see panelSlots).
-  function analyzeRoof(buildings, index, k, sun, cfg, usable) {
-    const b = buildings[k];
-    const slots = panelSlots(b, cfg, usable);
-    const z = b.height + cfg.PANEL_HEIGHT_ABOVE_ROOF_M;
-    const kd = cfg.DIFFUSE_FRACTION;
-    for (const sl of slots) {
-      let lit = 0;
-      for (const s of sun) if (!isShaded(index, buildings, sl.cx, sl.cy, z, s)) lit += s.w;
-      sl.direct = lit;                                    // share of yearly direct sun that reaches the panel
-      sl.sky = skyView(index, buildings, sl.cx, sl.cy, z); // share of open sky
-      sl.sunFactor = (1 - kd) * sl.direct + kd * sl.sky;  // 1 = no shade at all
-      sl.kwhM2 = cfg.GHI_KWH_M2_YEAR * sl.sunFactor;      // yearly sun on the panel, kWh/m²
-    }
-    return { slots, roofArea: footprintArea(b) };
-  }
-
-  /* ---------- quick rating of a whole area (Area tab) ---------- */
+  /* ---------- quick rating of every roof ---------- */
   // Every `every`-th sun position, weights renormalised: enough to rank roofs, 4x faster.
   function fewSun(sun, every = 4) {
     const few = sun.filter((_, i) => i % every === 0);
@@ -333,9 +253,8 @@
     return pts;
   }
 
-  // Quick rating of one roof, to colour a whole area: sun and shade at a few roof points, the roof
-  // minus its edge strip and the obstacle allowance, flat panels. Same assumptions as the quick
-  // estimate in the Roof Report, so the two agree roughly. kwhPerM2 = kWh a year per m² of roof.
+  // Quick rating of one roof, for roofs our pipeline has not run: sun and shade at a few roof points,
+  // the roof minus its edge strip and the obstacle allowance, flat panels. kwhPerM2 = kWh a year per m² of roof.
   function roofPotential(buildings, index, k, sun, cfg) {
     const b = buildings[k];
     const pts = roofPoints(b, cfg.ROOF_SETBACK_M);
@@ -358,48 +277,9 @@
     };
   }
 
-  /* ---------- energy and demand ---------- */
-  function panelYearKwh(slot, cfg) {
-    return slot.kwhM2 * cfg.PANEL_LENGTH_M * cfg.PANEL_WIDTH_M * cfg.PANEL_EFFICIENCY * cfg.PERFORMANCE_RATIO;
-  }
-
-  // Yearly electricity use: floor area × intensity. b.floors / b.intensity can be set from city data.
-  function buildingDemand(b, cfg) {
-    const floors = b.floors || Math.max(1, Math.round(b.height / cfg.FLOOR_HEIGHT_M));
-    return footprintArea(b) * floors * (b.intensity || cfg.DEMAND_KWH_M2_YEAR);
-  }
-
-  // Who gets the energy. Returns Map(buildingIndex -> {received, demand, share}).
-  function allocate(buildings, k, production, cfg, policy) {
-    const me = buildings[k];
-    const inRing = [];
-    buildings.forEach((b, i) => {
-      const d = Math.hypot(b.c[0] - me.c[0], b.c[1] - me.c[1]);
-      if (d <= cfg.SHARE_RADIUS_M) inRing.push({ i, d, demand: b.demand });
-    });
-    const res = new Map();
-    if (policy === "equal") {
-      const total = inRing.reduce((s, o) => s + o.demand, 0) || 1;
-      const share = Math.min(1, production / total);
-      for (const o of inRing) res.set(o.i, { received: o.demand * share, demand: o.demand, share });
-      return res;
-    }
-    // "own-first": own building, then nearest neighbours get their full demand until energy runs out
-    inRing.sort((a, z) => (a.i === k ? -1 : z.i === k ? 1 : a.d - z.d));
-    let left = production;
-    for (const o of inRing) {
-      if (left <= 0) break;
-      const got = Math.min(left, o.demand);
-      left -= got;
-      res.set(o.i, { received: got, demand: o.demand, share: o.demand ? got / o.demand : 0 });
-    }
-    return res;
-  }
-
   const api = {
     makeProjection, polygonArea, footprintArea, insideFootprint, centroid, pointInPolygon, bbox, cleanRing, buildIndex, findBuilding,
-    sunPosition, sunSamples, isShaded, skyView, insideUsable, panelSlots, analyzeRoof, panelYearKwh, buildingDemand, allocate,
-    fewSun, roofPotential,
+    sunPosition, sunSamples, isShaded, skyView, fewSun, roofPotential,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Solar = api;

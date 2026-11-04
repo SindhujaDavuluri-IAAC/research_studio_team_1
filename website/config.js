@@ -1,5 +1,4 @@
-// Roofscapes RePowered — settings and assumptions.
-// Every number marked ASSUMPTION should be replaced with a sourced value before the final review.
+// Roofscapes RePowered — settings of the map. The pipeline's assumptions are in ../pipeline.
 
 window.APP_CONFIG = {
   // ---- Barcelona City Council open services (geo.bcn.cat) ----
@@ -9,68 +8,33 @@ window.APP_CONFIG = {
     "https://geo.bcn.cat/agisserver/rest/services/Hosted/BCN_3DtoFeat/SceneServer", // detailed LOD2 model
     "https://geo.bcn.cat/agisserver/rest/services/Hosted/3D_MTM/SceneServer/layers/0", // simple volumes
   ],
-  // Same buildings as 2D footprints with height, roof form and use (used for the calculation).
+  // Same buildings as 2D footprints with height, roof form and use (used without data/buildings.json).
   BUILDINGS_FEATURE_LAYER: "https://geo.bcn.cat/agisserver/rest/services/Hosted/BCN_3DtoFeat/FeatureServer/22",
   // City background map.
   BASEMAP_STYLE: "https://geo.bcn.cat/agisportal/sharing/rest/content/items/31ee4f5c2b52411b8d1a43b9c56ec808/resources/styles/root.json",
 
-  // Area loaded around a clicked building (metres): neighbours that cast shade and can receive energy.
-  // Used only outside our study area; inside it, the buildings come from BUILDINGS_FILE.
-  LOAD_RADIUS_M: 350,
-
   // ---- Our own data (made by the Python pipeline, see ../pipeline/README.md) ----
-  // The study area's buildings, saved once with `python -m web.buildings`. Clicks inside the study
-  // area read this file instead of asking the city server. Without the file the map still works.
+  // Our 9 blocks: the first 5 characters of the cadastral reference (Catastro "manzana"). Two of the blocks are
+  // split in two by a passage (one of them is Passatge Permanyer), so 11 codes. Only these buildings are coloured by us;
+  // the rest of the city keeps the city's own 3D model.
+  BLOCKS: ["03286", "04276", "05266", "04296", "05293", "05285", "06282", "06276", "05306", "06296", "07285"],
+  // The 9 blocks' buildings, saved once with `python -m web.buildings` (without it they come from the city server).
   BUILDINGS_FILE: "data/buildings.json",
-  // One file per roof run by the pipeline (`--web`), plus index.json, the list of those roofs.
+  // One file per roof run by the pipeline (step 4 with `--web`), plus index.json, the list of those roofs.
   ROOFS_FOLDER: "data/roofs/",
-  // Step 5's sharing groups, made with `python -m web.sharing` after `python -m step5.sharing`.
-  SHARING_FILE: "data/sharing.json",
+  // Step 5c's communities. The first file found is shown:
+  COMMUNITIES_FILE: "data/communities.json",         // step 5c's full results: python -m web.communities
+  COMMUNITIES_MAP_FILE: "data/communities_map.json", // the same communities read from step 5c's map (until the first exists)
 
-  // ---- Area screen ----
-  // Building colours, from the worst 20% for solar panels to the best 20% (kWh a year per m² of roof).
-  POTENTIAL_COLORS: ["#7d8a99", "#c2a26b", "#eaa733", "#f6c444", "#ffe27a"],
-  HOME_KWH_YEAR: 2500,             // ASSUMPTION: one home's yearly use (step 5's typical 85 m² flat), for "homes it could power"
+  // One colour per community, the same as step 5c's map (pipeline/step5/communities.py, PALETTE). The host roof
+  // gets the colour, the guest buildings a pale version of it: GUEST_TINT of the way towards white.
+  COMMUNITY_COLORS: ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#bcbd22", "#17becf", "#7f7f7f"],
+  GUEST_TINT: 0.45,
+  NOT_MEMBER_COLOR: "#dad8d2",   // a building of the 9 blocks in no community (step 5c's map: 218, 216, 210)
 
   // ---- Speed ----
   QUALITY: "medium",               // "high" is sharper but much heavier for a laptop
-  SHADOWS_AT_START: false,         // live sun shadows on the 3D model; can be turned on in "Sun and shadows"
+  SHADOWS_AT_START: false,         // live sun shadows on the 3D model; the Shadows switch in the time bar
 
-  // ---- Sun and climate (Barcelona) ----
-  GHI_KWH_M2_YEAR: 1600,   // ASSUMPTION: yearly sun on a flat open surface. Check with PVGIS for your point.
-  DIFFUSE_FRACTION: 0.38,  // ASSUMPTION: share of that sun that comes from the sky, not directly from the sun.
-
-  // ---- Panels ----
-  PANEL_LENGTH_M: 1.76,
-  PANEL_WIDTH_M: 1.13,
-  PANEL_GAP_M: 0.05,
-  PANEL_EFFICIENCY: 0.21,          // typical 2026 monocrystalline panel
-  PERFORMANCE_RATIO: 0.8,          // losses: heat, inverter, cables, dirt
-  PANEL_HEIGHT_ABOVE_ROOF_M: 0.5,
-  ROOF_SETBACK_M: 1.0,             // free strip along the roof edge and courtyards (parapet, safety, access)
-  PANEL_PACKING: 0.9,              // share of the free roof the panels cover in the quick estimate (flat panels, small gaps)
-  OBSTACLE_FACTOR: 0.75,           // ASSUMPTION: 25% of slots lost to stairs, tanks, AC units. The AI roof reading will replace this.
-
-  // ---- Buildings and demand ----
-  FLOOR_HEIGHT_M: 3.2,
-  DEMAND_KWH_M2_YEAR: 30,          // ASSUMPTION: default electricity per m² of floor per year
-  // ASSUMPTION: electricity per m² of floor per year by use (matched against the city's "uso_desc").
-  DEMAND_BY_USE: [
-    { match: "residencial", kwh: 30 },
-    { match: "oficina", kwh: 90 },
-    { match: "comercial", kwh: 110 },
-    { match: "industrial", kwh: 60 },
-    { match: "almac", kwh: 20 },
-    { match: "aparcamiento", kwh: 10 },
-    { match: "educa", kwh: 35 },
-    { match: "cultural", kwh: 45 },
-    { match: "sanid", kwh: 120 },
-    { match: "deport", kwh: 50 },
-    { match: "religio", kwh: 15 },
-    { match: "ocio", kwh: 100 },
-    { match: "hosteler", kwh: 100 },
-  ],
-
-  // ---- Sharing rule ----
-  SHARE_RADIUS_M: 2000,            // Spanish collective self-consumption: up to 2 km from the panels
+  FLOOR_HEIGHT_M: 3.2,   // to count floors from a building's height
 };

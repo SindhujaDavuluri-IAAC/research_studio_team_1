@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MATCHSOL (hourly version)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-tab="matches">
+  <header id="topbar" class="topbar">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><path d="M13 3 A11 11 0 0 0 13 25 Z" fill="#eaa733"></path><path d="M15 3 A11 11 0 0 1 15 25 Z" fill="#1f5f8b"></path></svg>
+      <div>
+        <p class="brand-name">MATCHSOL</p>
+        <p class="brand-sub">Barcelona · 9 blocks of the Eixample</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Screens">
+      <button type="button" role="tab" data-tab="matches" aria-selected="true">Matches</button>
+      <button type="button" role="tab" data-tab="split" aria-selected="false">Hourly split</button>
+      <button type="button" role="tab" data-tab="money" aria-selected="false">Money</button>
+      <button type="button" role="tab" data-tab="method" aria-selected="false">How it works</button>
+    </nav>
+    <form id="search" class="search" role="search">
+      <label for="search-input">Address</label>
+      <input id="search-input" type="text" placeholder="Carrer del Bruc 59" autocomplete="street-address">
+      <button type="submit">Find its match</button>
+    </form>
+  </header>
+
+  <div id="map" aria-label="3D map of Barcelona (Ajuntament de Barcelona model)"></div>
+  <div id="veil" hidden></div>
+
+  <aside id="legend" class="legend card" aria-label="Map colours"></aside>
+
+  <!-- MATCHES: the panel on the right -->
+  <aside id="panel" class="card">
+    <p id="status" class="status" data-kind="loading">Starting the 3D map…</p>
+
+    <section id="overview" class="view" aria-labelledby="overview-title">
+      <p class="eyebrow">Matches · 9 blocks</p>
+      <h1 id="overview-title">Who should share solar power with whom?</h1>
+      <p class="source-tag" data-kind="preview">Preview · computed in your browser</p>
+      <p class="text">Each line joins buildings that use power at different times. Change the day and the hour: the power changes direction.</p>
+      <div class="now"><i id="o-now-dot"></i><p><b id="o-now-title"></b> <span id="o-now-text"></span></p></div>
+      <div>
+        <p class="subhead">Solar power used in the neighbourhood</p>
+        <div class="bars">
+          <span>Each building alone</span><span class="bar"><i id="o-alone-bar" class="grey"></i></span><b id="o-alone">–</b>
+          <span>Matched</span><span class="bar"><i id="o-matched-bar"></i></span><b id="o-matched">–</b>
+        </div>
+        <p class="note">Over a year. The rest is sold to the grid at a low price.</p>
+      </div>
+      <dl class="tiles">
+        <div><dt>Matches</dt><dd id="o-count">–</dd></div>
+        <div><dt>Buildings matched</dt><dd id="o-buildings">–</dd></div>
+        <div><dt>Shared a year</dt><dd id="o-shared">–</dd></div>
+        <div><dt>Money kept a year</dt><dd id="o-money">–</dd></div>
+      </dl>
+      <p id="o-note" class="note"></p>
+      <div>
+        <p class="subhead">The matches <span class="subnote">(click one, here or on the map)</span></p>
+        <div id="o-list" class="match-list"></div>
+      </div>
+    </section>
+
+    <section id="match" class="view" aria-labelledby="match-title" hidden>
+      <button id="m-back" type="button" class="back">All matches</button>
+      <p class="match-head"><i id="m-dot" class="dot"></i><span id="m-eyebrow" class="eyebrow"></span></p>
+      <h1 id="match-title"></h1>
+      <p id="m-sub" class="text"></p>
+      <div class="now"><i id="m-now-dot"></i><p id="m-now-text"></p></div>
+      <div>
+        <p id="m-chart-title" class="subhead"></p>
+        <svg id="m-chart" viewBox="0 0 336 156" role="img"></svg>
+        <div class="chart-key">
+          <span><i class="sun"></i>Sun on the match's roofs</span>
+          <span><i class="line home"></i>Homes use</span>
+          <span><i class="line day"></i>School and office use</span>
+        </div>
+      </div>
+      <div>
+        <p class="subhead">Solar power used in the match, over a year</p>
+        <div class="bars">
+          <span>Each building alone</span><span class="bar"><i id="m-alone-bar" class="grey"></i></span><b id="m-alone">–</b>
+          <span>Matched</span><span class="bar"><i id="m-matched-bar"></i></span><b id="m-matched">–</b>
+        </div>
+      </div>
+      <div>
+        <p class="subhead">Who is in the match</p>
+        <ul id="m-members" class="member-list"></ul>
+      </div>
+      <dl class="tiles">
+        <div><dt>Shared a year</dt><dd id="m-shared">–</dd></div>
+        <div><dt>Still sold to the grid</dt><dd id="m-grid">–</dd></div>
+        <div><dt>Money kept a year</dt><dd id="m-money">–</dd></div>
+        <div><dt>CO₂ avoided by its panels</dt><dd id="m-co2">–</dd></div>
+      </dl>
+      <div class="buttons">
+        <button id="m-to-split" type="button" class="primary">Hourly split table</button>
+        <button id="m-to-money" type="button" class="secondary">Who pays whom</button>
+      </div>
+    </section>
+  </aside>
+
+  <!-- HOURLY SPLIT -->
+  <section id="split" class="page" aria-labelledby="split-title" hidden>
+    <div class="page-head">
+      <p class="match-head"><i id="s-dot" class="dot"></i><span class="eyebrow">Hourly split</span></p>
+      <h1 id="split-title">Who gets each roof's power, hour by hour</h1>
+      <p class="text">Spanish law lets the power of one roof be split between buildings up to 5 km apart, with a different share for every hour of the year. This is the table a match gives the electricity company. The shares can change every four months.</p>
+    </div>
+    <div class="page-cols">
+      <div class="card page-main">
+        <div class="controls">
+          <label class="control"><span>Match</span><select id="s-match"></select></label>
+          <div class="control"><span id="s-roof-label">Roof</span><div id="s-roofs" class="pills" role="group" aria-labelledby="s-roof-label"></div></div>
+          <div class="control"><span id="s-day-label">Day</span><div id="s-days" class="pills" role="group" aria-labelledby="s-day-label"></div></div>
+        </div>
+        <div class="table-box"><div id="s-table" class="split-table"></div></div>
+        <p id="s-caption" class="note"></p>
+      </div>
+      <aside class="page-side">
+        <div class="card side-card">
+          <p class="subhead">This match in a year</p>
+          <div class="bars">
+            <span>Each building alone</span><span class="bar"><i id="s-alone-bar" class="grey"></i></span><b id="s-alone">–</b>
+            <span>Matched</span><span class="bar"><i id="s-matched-bar"></i></span><b id="s-matched">–</b>
+          </div>
+          <dl class="tiles">
+            <div><dt>Shared between buildings</dt><dd id="s-shared">–</dd></div>
+            <div><dt>Still sold to the grid</dt><dd id="s-grid">–</dd></div>
+          </dl>
+        </div>
+        <div class="card side-card">
+          <p class="subhead">For the electricity company</p>
+          <p class="text">One share for every hour of the year, for each building in the match: 8,760 lines for this roof. In the file, the part that would go to the grid stays with the roof's own building, because every hour's shares must add up to 1.</p>
+          <button id="s-download" type="button" class="primary">Download the split file (.csv)</button>
+          <p class="note">Real Decreto 244/2019 · Orden TED/1247/2021 · Real Decreto-ley 7/2026</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- MONEY -->
+  <section id="money" class="page" aria-labelledby="money-title" hidden>
+    <div class="page-head">
+      <p class="match-head"><i id="y-dot" class="dot"></i><span class="eyebrow">Money</span></p>
+      <h1 id="money-title">Who pays whom</h1>
+      <p class="text">The power goes into the street's grid like always. The meters and the split table decide whose it is. Then the buildings settle the money between themselves.</p>
+    </div>
+    <div class="page-cols">
+      <div class="page-main-stack">
+        <div class="card page-main">
+          <div class="price-head">
+            <label for="price">Price of a shared kWh</label>
+            <span id="price-out" class="big"></span>
+          </div>
+          <input id="price" type="range" step="0.01">
+          <div class="price-ends"><span id="price-min"></span><span id="price-max"></span></div>
+          <div class="split-bar" aria-hidden="true"><i id="sell-bar" class="home"></i><i id="buy-bar" class="day"></i></div>
+          <div class="gains">
+            <div class="gain home"><span>Buildings that give power earn, a year</span><b id="g-sell">–</b><small id="g-sell-note"></small></div>
+            <div class="gain day"><span>Buildings that get power save, a year</span><b id="g-buy">–</b><small id="g-buy-note"></small></div>
+          </div>
+          <p id="g-note" class="note"></p>
+        </div>
+        <div class="card page-main">
+          <div class="controls"><label class="control"><span>Match</span><select id="y-match"></select></label></div>
+          <div class="table-box">
+            <table class="money-table">
+              <thead><tr><th scope="col">Building</th><th scope="col">Gives</th><th scope="col">Gets</th><th scope="col">Is paid</th><th scope="col">Pays</th><th scope="col">Better off</th></tr></thead>
+              <tbody id="y-rows"></tbody>
+            </table>
+          </div>
+          <p class="note">kWh and € a year. "Better off" compares with no match: selling the extra power to the grid and buying the missing power from it.</p>
+        </div>
+        <div class="two">
+          <div class="card side-card"><p class="subhead">Way 1 · Pay per kWh</p><p class="text">Every month the buildings that got power pay the ones that gave it, at the agreed price. The kWh come from the electricity company's hourly data, so nobody has to count.</p></div>
+          <div class="card side-card"><p class="subhead">Way 2 · Invest together</p><p class="text">A building pays part of the panels at the start. After that, its share of the power is free. This is the co-investment model of our step 5c.</p></div>
+        </div>
+      </div>
+      <aside class="page-side">
+        <div class="card side-card">
+          <p class="subhead">How the bill works</p>
+          <ol class="bill-steps">
+            <li><b>Meters.</b> Every building has a smart meter that counts each hour. The roof has its own meter for what it makes.</li>
+            <li><b>Split table.</b> The match gives the electricity company the share of every roof for every hour.</li>
+            <li><b>Every hour.</b> The company gives each building its share of the roof's kWh and takes it off that building's bill.</li>
+            <li><b>Between the buildings.</b> They settle the money themselves, by kWh or by investing. This part is a private agreement.</li>
+          </ol>
+        </div>
+        <div class="card side-card">
+          <p class="subhead">All matches in a year</p>
+          <dl class="tiles">
+            <div><dt>Shared</dt><dd id="y-shared">–</dd></div>
+            <div><dt>Kept in the neighbourhood</dt><dd id="y-kept">–</dd></div>
+          </dl>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="story" class="page" aria-labelledby="story-title" hidden>
+    <div class="story-top">
+      <div class="problem">
+        <p class="eyebrow light">MATCHSOL</p>
+        <h1 id="story-title">Homes are empty at noon. Schools are empty on weekends.</h1>
+        <p class="lead">MATCHSOL matches them, so every solar kilowatt-hour is used in the neighbourhood.</p>
+        <p>Today a home roof's extra power at noon is sold to the grid for little money. At the same hour, a school or an office nearby buys power at the full price.</p>
+      </div>
+      <div class="card principle">
+        <p class="subhead">Weekdays: homes give, schools and offices get</p>
+        <svg id="p-weekday" viewBox="0 0 300 110" aria-hidden="true"></svg>
+        <p class="text">The sun (yellow) peaks when the school and the office (blue) are open, while the homes (orange) wait for the evening.</p>
+      </div>
+      <div class="card principle">
+        <p class="subhead">Weekends and summer: schools give, homes get</p>
+        <svg id="p-weekend" viewBox="0 0 300 110" aria-hidden="true"></svg>
+        <p class="text">The school is closed, so its roof powers the homes, most of all the homes whose roofs are too shaded for panels.</p>
+      </div>
+    </div>
+    <div class="facts">
+      <div class="card fact"><b>5 km</b><p><strong>The law.</strong> Buildings up to 5 km apart can share one roof's solar power (since 2026), with a different share for every hour (since 2021). Our 9 blocks are less than 1 km across, so any building can match any other.</p></div>
+      <div class="card fact"><b id="p-metric">–</b><p><strong>How we measure success.</strong> The share of the solar power used in the neighbourhood: each building alone, and in its match.</p></div>
+    </div>
+    <ol class="steps">
+      <li class="step">
+        <p class="step-n">Step 1</p>
+        <h2>Read the roofs</h2>
+        <div class="step-trio">
+          <img src="../website/img/lluria56_photo.png" alt="Aerial photo of the roof of Roger de Llúria 56">
+          <img src="../website/img/lluria56_height.png" alt="LiDAR height map of the same roof: green is the main roof level, red the stair housings">
+          <img src="../website/img/lluria56_preview.png" alt="The roof read by our pipeline: green free roof, red obstacles, yellow where panels fit">
+        </div>
+        <p>LiDAR and the aerial photo show where panels fit. Our pipeline places them and counts the kWh, hour by hour, with shade.</p>
+        <p class="ai-tag">Done: steps 2–4 of our pipeline</p>
+        <p class="step-src">ICGC LiDAR · ICGC photo · PVGIS</p>
+      </li>
+      <li class="step">
+        <p class="step-n">Step 2</p>
+        <h2>Know each building</h2>
+        <div class="step-pic"><svg width="200" height="110" viewBox="0 0 200 110" aria-hidden="true"><g stroke="#16202a" stroke-width="1.5"><rect x="10" y="34" width="50" height="70" fill="#eaa733"></rect><rect x="75" y="54" width="50" height="50" fill="#1f5f8b"></rect><rect x="140" y="24" width="50" height="80" fill="#8fb8de"></rect></g><g font-family="IBM Plex Mono, monospace" font-size="11" text-anchor="middle" fill="#16202a"><text x="35" y="27">home</text><text x="100" y="47">school</text><text x="165" y="17">office</text></g></svg></div>
+        <p>From the land registry: homes, schools, offices or shops, how many flats and how much floor area.</p>
+        <p class="step-src">Catastro (in this preview: the city's 3D model)</p>
+      </li>
+      <li class="step">
+        <p class="step-n">Step 3</p>
+        <h2>Predict its use, hour by hour</h2>
+        <div class="step-pic"><svg id="p-bands" width="200" height="106" viewBox="0 0 200 106" aria-hidden="true"></svg></div>
+        <p>The city's meter data by postal code, type of user and time of day gives the daily shape of homes and of services. Each building gets its own hourly use.</p>
+        <p class="step-src">Open Data BCN (Datadis meters) · our step 5</p>
+      </li>
+      <li class="step">
+        <p class="step-n">Step 4</p>
+        <h2>Match the buildings</h2>
+        <div class="step-pic"><svg width="200" height="110" viewBox="0 0 200 110" aria-hidden="true"><g fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M40 28 Q70 30 84 44" stroke="#b06f00"></path><path d="M40 84 Q66 80 82 68" stroke="#b06f00"></path><path d="M118 52 Q140 34 158 30" stroke="#1f5f8b"></path><path d="M118 62 Q142 80 158 84" stroke="#1f5f8b"></path></g><g stroke="#16202a" stroke-width="1.5"><rect x="16" y="16" width="24" height="24" rx="3" fill="#eaa733"></rect><rect x="16" y="72" width="24" height="24" rx="3" fill="#eaa733"></rect><rect x="86" y="42" width="32" height="28" rx="4" fill="#1f5f8b"></rect><rect x="162" y="18" width="24" height="24" rx="3" fill="#f5d38f"></rect><rect x="162" y="72" width="24" height="24" rx="3" fill="#f5d38f"></rect></g></svg></div>
+        <p>Buildings whose use falls at different times are joined. For each match: the lines on the map, the hourly split table, and the money kept.</p>
+        <p class="step-src">Real Decreto 244/2019 · Orden TED/1247/2021 · RDL 7/2026</p>
+      </li>
+    </ol>
+  </section>
+
+  <div id="timebar" class="timebar card">
+    <span id="t-day-label" class="eyebrow">Day</span>
+    <div id="t-days" class="pills" role="group" aria-labelledby="t-day-label"></div>
+    <label for="t-hour">Hour</label>
+    <input id="t-hour" type="range" min="5" max="22" step="1" value="13">
+    <span id="t-hour-out" class="hour-out">13:00</span>
+    <label class="check"><input id="t-shadows" type="checkbox"> Shadows</label>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="solar.js"></script>
+  <script src="match.js"></script>
+  <script src="https://js.arcgis.com/4.31/"></script>
+  <script src="app.js"></script>
+</body>
+</html>
