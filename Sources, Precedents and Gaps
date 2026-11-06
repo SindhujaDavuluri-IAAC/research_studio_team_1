@@ -4,20 +4,9 @@ ROOFSCAPES REPOWERED - DATA SOURCES AND PRECEDENTS
 Project:      Roofscapes RePowered
 Programme:    IAAC MaAI, Research Studio "Operable Futures", team 1
 Year:         2026
-Contributors: Breno Sader, Sindhuja (surname not in the repo), Daria Basha
+Contributors: Breno Sader, Daria Basha, Sindhuja Davuluri
 Repository:   https://github.com/iaac-maai/research_studio_team_1
-List checked: 4 November 2026
-
-HOW TO READ THE STATUS LINE
-  CONFIRMED    Name, year, contributors and link were checked online.
-  PARTLY       Some details are confirmed. The note says what is still open.
-  UNCONFIRMED  Taken from the project files only, or not found online.
-
-"Service address" means the link is copied from the project code. It was not
-opened during this check. Live datasets have no single publication year, so
-their year says "Live service, used 2026".
-
-Everything that still needs a manual search is listed in section 6.
+List updated: 4 November 2026
 
 
 1. DATA SOURCES USED BY THE TOOL
@@ -231,7 +220,7 @@ L5. "Legal check for the rooftop solar tool"
     Status:       UNCONFIRMED
 
 
-5. NAMED IN THE PROJECT, NOT USED YET
+5. ADDITIONAL REFERENCES, NOT USED YET
 -------------------------------------
 
 F1. RID: Roof Information Dataset for Computer Vision-Based Photovoltaic Potential Assessment
@@ -278,7 +267,6 @@ Highest priority: these affect numbers or claims the project shows.
         whether Tecnogeo built it.
 
 Details to complete
-[ ] Team: add Sindhuja's surname.
 [ ] P1  The paper says "Plaça del Doctor Letamendi, 29", but pipeline/smoke_test.py uses
         "Carrer de Letamendi 29". Check that the test looks up the right building.
 [ ] D1  Catastro: official documentation link and licence.
