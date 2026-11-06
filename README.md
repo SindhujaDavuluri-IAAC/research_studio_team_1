@@ -1,4 +1,4 @@
-# Roofscapes RePowered
+# Rooftops RePowered
 
 IAAC MaAI · Research Studio "Operable Futures" · team 1: Breno, Sindhuja, Daria
 
